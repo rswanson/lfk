@@ -11,6 +11,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"time"
 )
 
 const envEnable = "LFK_ENERGY_PROBE"
@@ -23,13 +24,27 @@ type Probe struct {
 	mu      sync.Mutex
 	stopped bool
 	stopCh  chan struct{}
+
+	tickInterval time.Duration
+
+	ringMu  sync.Mutex
+	ring    []Sample
+	ringCap int
+
+	tickMu     sync.Mutex
+	tickCounts map[string]uint64
 }
 
 // Start returns an initialised probe. When LFK_ENERGY_PROBE is unset or
 // empty, the returned probe is disabled and Stop is a no-op.
 func Start() (*Probe, error) {
 	enabled := os.Getenv(envEnable) == "1"
-	p := &Probe{enabled: enabled}
+	p := &Probe{
+		enabled:      enabled,
+		tickInterval: time.Second,
+		ringCap:      defaultRingCapacity,
+		tickCounts:   make(map[string]uint64),
+	}
 	if !enabled {
 		return p, nil
 	}
@@ -39,7 +54,7 @@ func Start() (*Probe, error) {
 	}
 	p.runID = id
 	p.stopCh = make(chan struct{})
-	// Sampling and output goroutines are added in later tasks.
+	p.startSampler()
 	return p, nil
 }
 

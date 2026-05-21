@@ -34,6 +34,9 @@ func TestProbe_StopIsIdempotent(t *testing.T) {
 
 func TestProbe_DisabledStartHasNoGoroutine(t *testing.T) {
 	t.Setenv("LFK_ENERGY_PROBE", "")
+	// Allow goroutines from preceding enabled-probe tests to finish stopping
+	// before we snapshot the baseline count.
+	time.Sleep(50 * time.Millisecond)
 	before := runtimeNumGoroutine()
 	p, err := Start()
 	require.NoError(t, err)
