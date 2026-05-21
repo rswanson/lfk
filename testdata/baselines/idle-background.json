@@ -1,13 +1,31 @@
 {
   "scenario": "idle-background",
-  "fixture": "small",
+  "fixture": "medium",
   "contexts": 3,
-  "duration_s": 5,
+  "duration_s": 90,
   "reps": 1,
   "primary": {
-    "wakeups_per_s": 44724.25,
-    "energy_impact": 0,
+    "wakeups_per_s": 2.62,
+    "energy_impact": 0.53,
     "pcore_active_residency_pct": 0,
     "ecore_active_residency_pct": 0
+  },
+  "probe": {
+    "wall_seconds": 84.999516,
+    "goroutines_mean": 25.74418604651163,
+    "goroutines_max": 33,
+    "gc_cpu_fraction_mean": 0.0002179660058299626,
+    "heap_alloc_mean_mb": 7.180755999999996,
+    "sched_latency_p99_us": 0,
+    "tick_counts_total": {
+      "main-context-interval": 42,
+      "main-refresh-5s": 86,
+      "main-status-500ms": 0
+    },
+    "tick_rates_per_second": {
+      "main-context-interval": 0.4941204606388582,
+      "main-refresh-5s": 1.011770467022424,
+      "main-status-500ms": 0
+    }
   }
 }
