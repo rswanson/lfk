@@ -21,7 +21,7 @@ func SetGlobal(p *Probe) { globalProbe.Store(p) }
 // it increments the tick counter for the given label.
 func Tick(label string, d time.Duration, fn func(time.Time) tea.Msg) tea.Cmd {
 	return tea.Tick(d, func(now time.Time) tea.Msg {
-		if p := globalProbe.Load(); p != nil && p.enabled {
+		if p := globalProbe.Load(); p.Enabled() {
 			p.tickMu.Lock()
 			p.tickCounts[label]++
 			p.tickMu.Unlock()

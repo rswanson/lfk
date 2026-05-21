@@ -25,6 +25,7 @@ func TestTick_WhenDisabled_IsPlainTeaTick(t *testing.T) {
 	msg := cmd()
 	_, ok := msg.(time.Time)
 	assert.True(t, ok, "wrapper must forward the producer's return value")
+	assert.Empty(t, p.snapshotTickCounts(), "disabled probe must not record tick counts")
 }
 
 func TestTick_WhenEnabled_IncrementsCounter(t *testing.T) {
