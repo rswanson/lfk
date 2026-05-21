@@ -16,6 +16,7 @@ func TestTopSampler_ParsesRecordedSample(t *testing.T) {
 	require.NotEmpty(t, samples)
 	s := samples[0]
 	assert.GreaterOrEqual(t, s.CPUPercent, 0.0)
+	assert.GreaterOrEqual(t, s.PowerScore, 0.0)
 	assert.GreaterOrEqual(t, s.WakeupsPerS, 0.0)
 }
 
@@ -41,26 +42,29 @@ func TestTopSampler_EmptyInputError(t *testing.T) {
 
 func TestTopSampler_SkipsUnparsableRows(t *testing.T) {
 	// A header block with one valid row and one unparsable row.
-	input := "Processes: 1 total\n\nPID    %CPU CSW\n12345  1.5  100\nbadrow\n"
+	input := "Processes: 1 total\n\nPID    %CPU POWER IDLEW\n12345  1.5  2.3   100\nbadrow\n"
 	samples, err := parseTopOutput(input)
 	require.NoError(t, err)
 	require.Len(t, samples, 1)
 	assert.Equal(t, 12345, samples[0].PID)
 	assert.InDelta(t, 1.5, samples[0].CPUPercent, 0.001)
+	assert.InDelta(t, 2.3, samples[0].PowerScore, 0.001)
 	assert.InDelta(t, 100.0, samples[0].WakeupsPerS, 0.001)
 }
 
-func TestTopSampler_HandlesTrailingPlusInCSW(t *testing.T) {
-	// CSW values suffixed with '+' (cumulative overflow marker) should parse cleanly.
-	input := "Processes: 1 total\n\nPID    %CPU CSW\n617    32.6 710558144+\n"
+func TestTopSampler_HandlesTrailingPlusInIDLEW(t *testing.T) {
+	// IDLEW values suffixed with '+' should parse cleanly.
+	input := "Processes: 1 total\n\nPID    %CPU POWER IDLEW\n617    32.6 12.5  42+\n"
 	samples, err := parseTopOutput(input)
 	require.NoError(t, err)
 	require.Len(t, samples, 1)
-	assert.InDelta(t, 710558144.0, samples[0].WakeupsPerS, 0.001)
+	assert.InDelta(t, 32.6, samples[0].CPUPercent, 0.001)
+	assert.InDelta(t, 12.5, samples[0].PowerScore, 0.001)
+	assert.InDelta(t, 42.0, samples[0].WakeupsPerS, 0.001)
 }
 
 func TestTopSampler_FiltersToPIDEmpty(t *testing.T) {
-	input := "Processes: 1 total\n\nPID    %CPU CSW\n12345  1.5  100\n"
+	input := "Processes: 1 total\n\nPID    %CPU POWER IDLEW\n12345  1.5  0.0   100\n"
 	samples, err := parseTopOutputForPID(input, 99999)
 	require.NoError(t, err)
 	assert.Empty(t, samples)

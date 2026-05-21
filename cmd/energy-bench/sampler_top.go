@@ -7,28 +7,29 @@ import (
 	"strings"
 )
 
-// topSample holds one row from `top -l N -stats pid,cpu,csw` output.
-// On this macOS version the available stats are pid, cpu, and csw (context
-// switches). The CSW count is stored in WakeupsPerS as a best available proxy
-// for wakeup activity; it is a cumulative counter, not a per-second rate.
+// topSample holds one row from `top -l N -stats pid,cpu,power,idlew` output.
+// PowerScore is top's energy-impact estimate (POWER column).
+// WakeupsPerS is the idle-wakeup count (IDLEW column) — this is the primary
+// energy-profiling metric, not a proxy.
 type topSample struct {
 	PID         int
 	CPUPercent  float64
-	WakeupsPerS float64 // populated from the CSW (context-switch) column
+	PowerScore  float64
+	WakeupsPerS float64 // populated from the IDLEW (idle wakeups) column
 }
 
-// parseTopOutput parses `top -l N -stats pid,cpu,csw` output and returns one
-// slice element per data row. Header and summary lines are skipped. Rows that
-// cannot be parsed are silently skipped so that a single bad line does not
-// abort the whole parse.
+// parseTopOutput parses `top -l N -stats pid,cpu,power,idlew` output and
+// returns one slice element per data row. Header and summary lines are
+// skipped. Rows that cannot be parsed are silently skipped so that a single
+// bad line does not abort the whole parse.
 //
 // macOS `top -l` (logging mode) repeats the header block for every sample
-// interval. Each block begins with summary lines (Processes, Load Avg, …)
+// interval. Each block begins with summary lines (Processes, Load Avg, ...)
 // followed by a column-header line that starts with "PID", then data rows.
 // The parser re-arms on every "PID" header so multiple intervals work.
 //
-// CSW values may be suffixed with '+' (indicating counter wraparound);
-// the suffix is stripped before parsing.
+// IDLEW values may be suffixed with '+' (indicating counter activity since
+// last sample); the suffix is stripped before parsing.
 func parseTopOutput(s string) ([]topSample, error) {
 	if strings.TrimSpace(s) == "" {
 		return nil, errors.New("empty top output")
@@ -56,8 +57,8 @@ func parseTopOutput(s string) ([]topSample, error) {
 		}
 
 		fields := strings.Fields(line)
-		// Expect at least: PID %CPU CSW
-		if len(fields) < 3 {
+		// Expect at least: PID %CPU POWER IDLEW
+		if len(fields) < 4 {
 			continue
 		}
 
@@ -70,12 +71,14 @@ func parseTopOutput(s string) ([]topSample, error) {
 		}
 
 		cpu := parseFloatLoose(fields[1])
-		csw := parseFloatLoose(fields[2])
+		power := parseFloatLoose(fields[2])
+		idlew := parseFloatLoose(fields[3])
 
 		out = append(out, topSample{
 			PID:         pid,
 			CPUPercent:  cpu,
-			WakeupsPerS: csw,
+			PowerScore:  power,
+			WakeupsPerS: idlew,
 		})
 	}
 
