@@ -1,8 +1,8 @@
 package energy
 
 import (
-	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,6 @@ func TestProbe_DisabledByDefault(t *testing.T) {
 
 func TestProbe_EnabledByEnvVar(t *testing.T) {
 	t.Setenv("LFK_ENERGY_PROBE", "1")
-	t.Setenv("LFK_DATA_DIR", t.TempDir())
 	p, err := Start()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = p.Stop() })
@@ -27,7 +26,6 @@ func TestProbe_EnabledByEnvVar(t *testing.T) {
 
 func TestProbe_StopIsIdempotent(t *testing.T) {
 	t.Setenv("LFK_ENERGY_PROBE", "1")
-	t.Setenv("LFK_DATA_DIR", t.TempDir())
 	p, err := Start()
 	require.NoError(t, err)
 	assert.NoError(t, p.Stop())
@@ -36,22 +34,20 @@ func TestProbe_StopIsIdempotent(t *testing.T) {
 
 func TestProbe_DisabledStartHasNoGoroutine(t *testing.T) {
 	t.Setenv("LFK_ENERGY_PROBE", "")
-	before := readGoroutineCount(t)
+	before := runtimeNumGoroutine()
 	p, err := Start()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = p.Stop() })
-	assert.LessOrEqual(t, readGoroutineCount(t), before,
+	// Give a hypothetical leaked goroutine a moment to register before
+	// snapshotting; if Start spawned anything it will be visible here.
+	time.Sleep(20 * time.Millisecond)
+	after := runtimeNumGoroutine()
+	assert.Equal(t, before, after,
 		"disabled probe must not start a goroutine")
-}
-
-func readGoroutineCount(t *testing.T) int {
-	t.Helper()
-	return runtimeNumGoroutine()
 }
 
 func TestProbe_RunIDIsStable(t *testing.T) {
 	t.Setenv("LFK_ENERGY_PROBE", "1")
-	t.Setenv("LFK_DATA_DIR", t.TempDir())
 	p, err := Start()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = p.Stop() })
@@ -61,5 +57,3 @@ func TestProbe_RunIDIsStable(t *testing.T) {
 }
 
 func runtimeNumGoroutine() int { return numGoroutineForTest() }
-
-var _ = os.Getenv // keep "os" used in this file

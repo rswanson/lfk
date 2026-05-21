@@ -7,7 +7,7 @@ package energy
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -67,7 +67,7 @@ func (p *Probe) Stop() error {
 func newRunID() (string, error) {
 	var b [8]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		return "", errors.New("energy: cannot generate run id")
+		return "", fmt.Errorf("energy: cannot generate run id: %w", err)
 	}
 	return hex.EncodeToString(b[:]), nil
 }
