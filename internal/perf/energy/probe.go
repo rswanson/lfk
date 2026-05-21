@@ -110,7 +110,7 @@ func (p *Probe) Stop() error {
 	close(p.stopCh)
 	p.mu.Unlock()
 	p.wg.Wait()
-	return nil
+	return p.flush()
 }
 
 func newRunID() (string, error) {
