@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/janosmiko/lfk/internal/perf/energy"
 )
@@ -56,6 +58,9 @@ func ingestProbe(energyDir string) (*ProbeAggregates, error) {
 	if len(allSamples) == 0 {
 		return nil, nil
 	}
+	sort.Slice(allSamples, func(i, j int) bool {
+		return allSamples[i].WallNanos < allSamples[j].WallNanos
+	})
 	return aggregate(allSamples), nil
 }
 
@@ -130,7 +135,12 @@ func aggregate(samples []energy.Sample) *ProbeAggregates {
 		for label, lastN := range last.TickCounts {
 			firstN := first.TickCounts[label]
 			if lastN < firstN {
-				continue // shouldn't happen — counts are monotonic
+				// Counts are monotonic within a single probe lifetime. A
+				// decrease here means the probe restarted mid-run (e.g., the
+				// lfk subprocess crashed and was relaunched). Drop the label
+				// and surface it so the report reader sees the corruption.
+				log.Printf("warning: tick count for %q dropped from %d to %d (probe restart?); skipping", label, firstN, lastN)
+				continue
 			}
 			delta := lastN - firstN
 			totals[label] = delta

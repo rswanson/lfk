@@ -98,7 +98,7 @@ func deltaPct(cur, bl float64, hasBaseline bool) string {
 		if cur == 0 {
 			return "0%"
 		}
-		return "—"
+		return "n/a (bl=0)"
 	}
 	pct := (cur - bl) / bl * 100
 	return fmt.Sprintf("%+.0f%%", pct)
