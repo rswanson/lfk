@@ -37,3 +37,10 @@ func TestScenarioIdleForeground_LifecycleNoCrash(t *testing.T) {
 	err := runIdleForeground(context.Background(), cfg)
 	assert.NoError(t, err)
 }
+
+func TestScenarioIdleBackground_BuildsOsascriptArgs(t *testing.T) {
+	args := osascriptUnfocusArgs("Ghostty")
+	require.Len(t, args, 2)
+	assert.Equal(t, "-e", args[0])
+	assert.Contains(t, args[1], "Finder")
+}
