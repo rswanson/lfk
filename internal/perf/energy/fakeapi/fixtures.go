@@ -13,7 +13,7 @@ func generate(podCount int) Fixture {
 	}
 	deployments := make([]map[string]any, 0, podCount/5)
 	services := make([]map[string]any, 0, podCount/5)
-	for i := 0; i < podCount/5; i++ {
+	for i := range podCount / 5 {
 		deployments = append(deployments, map[string]any{
 			"metadata": map[string]any{"name": fmt.Sprintf("app-%03d", i), "namespace": "default"},
 			"spec":     map[string]any{"replicas": 5},
@@ -24,7 +24,7 @@ func generate(podCount int) Fixture {
 		})
 	}
 	pods := make([]map[string]any, 0, podCount)
-	for i := 0; i < podCount; i++ {
+	for i := range podCount {
 		pods = append(pods, map[string]any{
 			"metadata": map[string]any{
 				"name":      fmt.Sprintf("pod-%04d", i),

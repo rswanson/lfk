@@ -34,7 +34,7 @@ func (p *Probe) flush() error {
 	if err != nil {
 		return fmt.Errorf("energy: create: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	enc := json.NewEncoder(f)
 	for _, s := range p.snapshotSamples() {
 		if err := enc.Encode(&s); err != nil {

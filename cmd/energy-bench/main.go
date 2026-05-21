@@ -62,7 +62,7 @@ func run(o opts) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	kcPath := filepath.Join(tmp, "kubeconfig")
 	if err := writeKubeconfig(kcPath, srv.URL); err != nil {
 		return err

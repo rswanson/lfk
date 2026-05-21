@@ -35,7 +35,7 @@ func TestFlush_WritesJSONLToDataDir(t *testing.T) {
 
 	f, err := os.Open(matches[0])
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	count := 0
 	sc := bufio.NewScanner(f)

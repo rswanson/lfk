@@ -1,0 +1,13 @@
+{
+  "scenario": "idle-foreground",
+  "fixture": "small",
+  "contexts": 3,
+  "duration_s": 5,
+  "reps": 1,
+  "primary": {
+    "wakeups_per_s": 44563.65,
+    "energy_impact": 0,
+    "pcore_active_residency_pct": 0,
+    "ecore_active_residency_pct": 0
+  }
+}

@@ -79,6 +79,32 @@ without the full harness.
   of a production cluster. Use the harness for branch-vs-baseline
   comparisons, not for absolute energy claims.
 
+## Phase 1 limitations (refined in Phase 2)
+
+- `top` sampling is currently a single tail sample taken after the scenario
+  ends, and is NOT filtered to lfk's PID. The numbers in `report.json`
+  reflect system-wide averages, not lfk's specific contribution. Phase 2
+  will switch to concurrent, PID-filtered sampling for accurate per-lfk
+  metrics. Branch-vs-baseline diffs are still meaningful as long as both
+  runs happen under similar system load — but absolute numbers are noisy.
+- The in-process probe (`LFK_ENERGY_PROBE=1`) captures lfk-specific data
+  (goroutines, GC, tick counts) in JSONL form. That data is currently
+  written to the probe's data dir but not yet folded into `report.json`.
+  Phase 2 will aggregate it alongside the macOS samplers.
+
+## Probe overhead verification
+
+A gating test verifies the in-process probe adds < 1% to `wakeups_per_s`
+on its hot path. It is skipped by default (results are noisy on busy
+laptops); run it explicitly when validating a probe change:
+
+```
+ENERGY_OVERHEAD_TEST=1 go test ./cmd/energy-bench -run TestProbe_OverheadUnder1Percent -v -count=1 -timeout=120s
+```
+
+Repeat 3-5 times under quiet system conditions if the first result looks
+borderline.
+
 ## Pre-run checklist
 
 Variance on a laptop is high. Before a measurement run:

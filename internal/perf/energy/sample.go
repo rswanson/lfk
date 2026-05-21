@@ -1,6 +1,7 @@
 package energy
 
 import (
+	"maps"
 	"runtime"
 	"runtime/metrics"
 	"time"
@@ -94,9 +95,7 @@ func (p *Probe) snapshotTickCounts() map[string]uint64 {
 		return nil
 	}
 	out := make(map[string]uint64, len(p.tickCounts))
-	for k, v := range p.tickCounts {
-		out[k] = v
-	}
+	maps.Copy(out, p.tickCounts)
 	return out
 }
 

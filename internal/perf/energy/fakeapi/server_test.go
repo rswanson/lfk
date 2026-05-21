@@ -18,7 +18,7 @@ func TestServer_HealthzAndReadyz(t *testing.T) {
 		resp, err := http.Get(s.URL + path)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "expected 200 on %s", path)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -34,7 +34,7 @@ func TestServer_ListsPodsFromFixture(t *testing.T) {
 
 	resp, err := http.Get(s.URL + "/api/v1/namespaces/default/pods")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	body, _ := io.ReadAll(resp.Body)
@@ -51,7 +51,7 @@ func TestServer_CoreDiscoveryHasNamespacesAndPods(t *testing.T) {
 
 	resp, err := http.Get(s.URL + "/api/v1")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	body, _ := io.ReadAll(resp.Body)
