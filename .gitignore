@@ -1,5 +1,6 @@
 # Binary
 /lfk
+/energy-bench
 
 # IDE
 .idea/
@@ -45,3 +46,7 @@ themes/ghostty/
 # Superpowers planning scratch (per-feature plans + design specs are
 # local working notes, not shipped artifacts).
 docs/superpowers/
+
+# Energy-bench runtime artifacts (reports are per-run noise; baselines
+# are committed but reports under testdata/energy-reports/ are not).
+testdata/energy-reports/

@@ -15,12 +15,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/janosmiko/lfk/internal/logger"
 	"github.com/janosmiko/lfk/internal/model"
+	"github.com/janosmiko/lfk/internal/perf/energy"
 	"github.com/janosmiko/lfk/internal/ui"
 )
 
 // scheduleStatusClear returns a command that sends a clear message after a delay.
 func scheduleStatusClear() tea.Cmd {
-	return tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
+	return energy.Tick("main-refresh-5s", 5*time.Second, func(_ time.Time) tea.Msg {
 		return statusMessageExpiredMsg{}
 	})
 }
@@ -77,14 +78,14 @@ var startupTips = []string{
 // scheduleStartupTip sends a random tip after a short delay to let the UI settle.
 func scheduleStartupTip() tea.Cmd {
 	tip := startupTips[rand.IntN(len(startupTips))]
-	return tea.Tick(500*time.Millisecond, func(_ time.Time) tea.Msg {
+	return energy.Tick("main-status-500ms", 500*time.Millisecond, func(_ time.Time) tea.Msg {
 		return startupTipMsg{tip: tip}
 	})
 }
 
 // scheduleWatchTick returns a command that sends a watchTickMsg after the interval.
 func scheduleWatchTick(interval time.Duration) tea.Cmd {
-	return tea.Tick(interval, func(_ time.Time) tea.Msg {
+	return energy.Tick("main-context-interval", interval, func(_ time.Time) tea.Msg {
 		return watchTickMsg{}
 	})
 }
@@ -92,14 +93,14 @@ func scheduleWatchTick(interval time.Duration) tea.Cmd {
 const previewDebounceDelay = 300 * time.Millisecond
 
 func schedulePreviewDebounce(gen uint64) tea.Cmd {
-	return tea.Tick(previewDebounceDelay, func(_ time.Time) tea.Msg {
+	return energy.Tick("preview-debounce", previewDebounceDelay, func(_ time.Time) tea.Msg {
 		return previewDebounceTickMsg{gen: gen}
 	})
 }
 
 // scheduleDescribeRefresh returns a command that sends a describeRefreshTickMsg after 2 seconds.
 func scheduleDescribeRefresh() tea.Cmd {
-	return tea.Tick(2*time.Second, func(_ time.Time) tea.Msg {
+	return energy.Tick("alerts-2s", 2*time.Second, func(_ time.Time) tea.Msg {
 		return describeRefreshTickMsg{}
 	})
 }

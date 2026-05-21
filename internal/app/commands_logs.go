@@ -17,6 +17,7 @@ import (
 	"github.com/janosmiko/lfk/internal/app/scheduler"
 	"github.com/janosmiko/lfk/internal/logger"
 	"github.com/janosmiko/lfk/internal/model"
+	"github.com/janosmiko/lfk/internal/perf/energy"
 	"github.com/janosmiko/lfk/internal/ui"
 )
 
@@ -70,7 +71,7 @@ func isKubectlTransientError(line string) bool {
 func (m Model) scheduleLogStreamRestart(ch chan string) tea.Cmd {
 	reg := m.scheduler
 	id := reg.Start(scheduler.KindContainers, "Waiting for next container", "")
-	return tea.Tick(logAutoReconnectDelay, func(_ time.Time) tea.Msg {
+	return energy.Tick("log-autoreconnect", logAutoReconnectDelay, func(_ time.Time) tea.Msg {
 		reg.Finish(id)
 		return logStreamRestartMsg{ch: ch}
 	})
