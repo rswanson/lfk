@@ -21,17 +21,14 @@ func TestFlush_WritesJSONLToDataDir(t *testing.T) {
 	time.Sleep(60 * time.Millisecond)
 	require.NoError(t, p.Stop())
 
-	// paths.DataDir() returns LFK_DATA_DIR verbatim, so our code appends "lfk"
-	// and "energy" — resulting in dir/lfk/energy/*.jsonl.
-	matches, err := filepath.Glob(filepath.Join(dir, "lfk", "energy", "*.jsonl"))
+	// paths.DataDir() treats LFK_DATA_DIR as the lfk data dir verbatim;
+	// the flush appends only "energy". The output path is dir/energy/*.jsonl.
+	matches, err := filepath.Glob(filepath.Join(dir, "energy", "*.jsonl"))
 	require.NoError(t, err)
-	if len(matches) == 0 {
-		// Alternative layout: paths.DataDir() already returned dir/lfk and our
-		// code joined only "energy".
-		matches, err = filepath.Glob(filepath.Join(dir, "energy", "*.jsonl"))
-		require.NoError(t, err)
-	}
-	require.Len(t, matches, 1, "expected exactly one JSONL file under the data dir")
+	require.Len(t, matches, 1, "expected exactly one JSONL file at dir/energy/")
+	// Defensive: confirm we did NOT write to the historical buggy dir/lfk/energy.
+	wrong, _ := filepath.Glob(filepath.Join(dir, "lfk", "energy", "*.jsonl"))
+	assert.Empty(t, wrong, "must not double-append lfk segment")
 
 	f, err := os.Open(matches[0])
 	require.NoError(t, err)
@@ -57,8 +54,6 @@ func TestFlush_DisabledProbeIsNoOp(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, p.Stop())
 
-	matches, _ := filepath.Glob(filepath.Join(dir, "lfk", "energy", "*.jsonl"))
-	more, _ := filepath.Glob(filepath.Join(dir, "energy", "*.jsonl"))
-	matches = append(matches, more...)
+	matches, _ := filepath.Glob(filepath.Join(dir, "energy", "*.jsonl"))
 	assert.Empty(t, matches, "disabled probe must not create files")
 }

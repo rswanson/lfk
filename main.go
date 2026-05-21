@@ -179,8 +179,8 @@ func runTUI(opts app.StartupOptions) error {
 	}
 
 	// Optional in-process energy probe. Set LFK_ENERGY_PROBE=1 to enable.
-	// Writes JSONL samples to $LFK_DATA_DIR/lfk/energy/<run-id>.jsonl on
-	// shutdown or on SIGUSR1. Off by default; zero overhead when off.
+	// Writes JSONL samples under the lfk data dir on shutdown or on SIGUSR1.
+	// Off by default; zero overhead when off.
 	probe, err := energy.Start()
 	if err != nil {
 		return fmt.Errorf("energy probe: %w", err)
@@ -191,6 +191,7 @@ func runTUI(opts app.StartupOptions) error {
 	if probe.Enabled() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGUSR1)
+		defer signal.Stop(sigCh)
 		go func() {
 			for range sigCh {
 				if err := probe.FlushOnSignal(); err != nil {

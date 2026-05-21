@@ -104,12 +104,28 @@ func run(o opts) error {
 	// 5. Sample top/powermetrics. For Phase 1 we take a short tail
 	//    sample. Future revisions can run sampling concurrently with
 	//    the scenario.
-	topOut, _ := exec.Command("top", "-l", "1", "-stats", "pid,cpu,power,idlew").Output()
-	topSamples, _ := parseTopOutput(string(topOut))
+	topOut, topErr := exec.Command("top", "-l", "1", "-stats", "pid,cpu,power,idlew").Output()
+	if topErr != nil {
+		log.Printf("warning: top sampling failed: %v (report metrics will be zero)", topErr)
+	}
+	topSamples, parseErr := parseTopOutput(string(topOut))
+	if parseErr != nil {
+		log.Printf("warning: parseTopOutput failed: %v", parseErr)
+	}
+	if len(topSamples) == 0 {
+		log.Printf("warning: no samples from top; report wakeups/energy will be zero")
+	}
 	var pm powermetricsSample
 	if o.useSudo {
-		pmOut, _ := exec.Command("sudo", "powermetrics", "--samplers", "cpu_power,tasks", "-i", "1000", "-n", "1").Output()
-		pm, _ = parsePowermetricsOutput(string(pmOut))
+		pmOut, pmErr := exec.Command("sudo", "powermetrics", "--samplers", "cpu_power,tasks", "-i", "1000", "-n", "1").Output()
+		if pmErr != nil {
+			log.Printf("warning: powermetrics failed: %v (P/E-core residency will be zero)", pmErr)
+		}
+		var perr error
+		pm, perr = parsePowermetricsOutput(string(pmOut))
+		if perr != nil {
+			log.Printf("warning: parsePowermetricsOutput failed: %v", perr)
+		}
 	}
 
 	// 6. Build report.

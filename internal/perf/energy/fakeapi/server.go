@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -25,7 +24,6 @@ type Fixture struct {
 type Server struct {
 	*httptest.Server
 	fx Fixture
-	mu sync.Mutex //nolint:unused // reserved for future watch-event mutation
 }
 
 // New returns a Server not yet started.
