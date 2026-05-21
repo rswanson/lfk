@@ -39,7 +39,7 @@ func TestTopStreamSampler_FiltersToPID(t *testing.T) {
 	dir := t.TempDir()
 	cmd := fakeTopScript(t, dir)
 
-	s := newTopStreamSampler(cmd, []string{}, time.Second)
+	s := newTopStreamSampler(cmd, []string{})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := s.Start(ctx, 1234); err != nil {
@@ -64,7 +64,7 @@ func TestTopStreamSampler_StopIsIdempotent(t *testing.T) {
 	}
 	dir := t.TempDir()
 	cmd := fakeTopScript(t, dir)
-	s := newTopStreamSampler(cmd, []string{}, time.Second)
+	s := newTopStreamSampler(cmd, []string{})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := s.Start(ctx, 1234); err != nil {

@@ -7,7 +7,7 @@ energy behaviour against checked-in baselines.
 
 ```
 make build
-make energy-bench                                  # default: idle-foreground, 90s, 3 reps
+make energy-bench                                  # default: idle-foreground, 90s, 1 rep
 SCENARIO=active-scripted make energy-bench         # other scenarios
 make energy-bench-all                              # run all three
 ```
@@ -69,7 +69,7 @@ The in-process probe also runs in normal lfk sessions:
 LFK_ENERGY_PROBE=1 ./lfk
 ```
 
-It writes one JSONL file per session under `$LFK_DATA_DIR/lfk/energy/`,
+It writes one JSONL file per session under `$LFK_DATA_DIR/energy/`,
 flushed on shutdown and on `SIGUSR1`. Useful for ad-hoc investigation
 without the full harness.
 
@@ -100,6 +100,12 @@ The report has three sections:
    for spotting an offending ticker: a high rate on a label that should
    only fire when its overlay is open means the ticker is leaking.
 
+Note: today the scenario runs exactly once per `energy-bench` invocation
+regardless of `-reps`. The flag is preserved as report metadata so that a
+future revision can implement multi-rep averaging without breaking the
+report schema; for now, treat each run as a single sample. Capture
+several runs manually and compare if variance matters for your decision.
+
 ## Probe overhead verification
 
 A gating test verifies the in-process probe adds < 1% to `wakeups_per_s`
@@ -120,4 +126,4 @@ Variance on a laptop is high. Before a measurement run:
 - Plug into power (or consistently *not* plug in, but pick one).
 - Quit other CPU-heavy apps.
 - Let the machine sit for ~30 seconds after closing apps before starting.
-- Run with the same `-reps 3` setting both times (current + baseline).
+- Run with the same `-reps 1` setting both times (current + baseline).

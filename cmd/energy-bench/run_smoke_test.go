@@ -43,10 +43,15 @@ func TestRun_SmokeIdleForeground(t *testing.T) {
 	if err := json.Unmarshal(data, &r); err != nil {
 		t.Fatalf("unmarshal report: %v", err)
 	}
-	if r.Primary.WakeupsPerSecond < 0 {
-		t.Errorf("nonsensical wakeups_per_s = %v", r.Primary.WakeupsPerSecond)
+	// /bin/cat is not an lfk build with the probe wrapper, so probe
+	// data is absent and the PID filter matches no rows (cat is not a
+	// long-lived foreground process at the system top level). What we
+	// can assert is that the pipeline completed and produced a
+	// structurally valid report at the expected scenario.
+	if r.Scenario != "idle-foreground" {
+		t.Errorf("got scenario %q, want idle-foreground", r.Scenario)
 	}
-	// /bin/cat is not an lfk build with the probe wrapper, so probe data
-	// will be absent. That's fine for this smoke test — we're verifying
-	// the pipeline does not crash and produces a top-derived primary block.
+	if r.Reps != 1 {
+		t.Errorf("got reps=%d, want 1 (smoke test passes -reps 1 implicitly via default)", r.Reps)
+	}
 }

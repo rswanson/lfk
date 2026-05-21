@@ -15,9 +15,8 @@ import (
 // block is discarded because top's initial IDLEW value is cumulative since
 // boot rather than a delta.
 type topStreamSampler struct {
-	bin      string
-	args     []string
-	interval time.Duration
+	bin  string
+	args []string
 
 	mu        sync.Mutex
 	started   bool
@@ -30,21 +29,15 @@ type topStreamSampler struct {
 
 // newTopStreamSampler builds a sampler that will run `bin args...` on
 // Start. For real use, pass topBin() and topArgs(); tests can pass a fake.
-func newTopStreamSampler(bin string, args []string, interval time.Duration) *topStreamSampler {
-	return &topStreamSampler{bin: bin, args: args, interval: interval}
+func newTopStreamSampler(bin string, args []string) *topStreamSampler {
+	return &topStreamSampler{bin: bin, args: args}
 }
 
 // topBin returns the `top` binary to invoke on the current OS.
-// Wired into main.go in Task 3; not yet called within this file.
-//
-//nolint:unused // called by main.go (Task 3 wires the streaming sampler into run())
 func topBin() string { return "top" }
 
 // topArgs returns the macOS top args for continuous, 1s-interval sampling
 // with the columns the parser expects.
-// Wired into main.go in Task 3; not yet called within this file.
-//
-//nolint:unused // called by main.go (Task 3 wires the streaming sampler into run())
 func topArgs(interval time.Duration) []string {
 	// -l 0: log forever; -s N: sample every N seconds; -stats: fixed columns.
 	secs := max(int(interval.Seconds()), 1)

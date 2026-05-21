@@ -35,7 +35,7 @@ func main() {
 		"scenario: idle-foreground | idle-background | active-scripted")
 	flag.StringVar(&o.fixture, "fixture", "medium", "fixture: small | medium | large")
 	flag.IntVar(&o.contexts, "contexts", 3, "number of kubeconfig contexts")
-	flag.IntVar(&o.repetitions, "reps", 3, "number of repetitions per scenario")
+	flag.IntVar(&o.repetitions, "reps", 1, "number of repetitions per scenario (currently advisory; the scenario runs once)")
 	flag.IntVar(&o.durationSec, "duration", 90, "scenario duration in seconds")
 	flag.StringVar(&o.outDir, "out", "testdata/energy-reports", "output directory")
 	flag.BoolVar(&o.useSudo, "powermetrics", false, "use powermetrics (requires sudo)")
@@ -77,7 +77,7 @@ func run(o opts) error {
 	)
 
 	ctx := context.Background()
-	sampler := newTopStreamSampler(topBin(), topArgs(time.Second), time.Second)
+	sampler := newTopStreamSampler(topBin(), topArgs(time.Second))
 	defer func() { _ = sampler.Stop() }() // ensure top is killed even if a scenario errors
 
 	cfg := scenarioConfig{
