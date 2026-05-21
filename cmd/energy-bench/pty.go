@@ -73,3 +73,11 @@ func (s *ptySession) Close() {
 	}
 	_ = s.cmd.Wait()
 }
+
+// PID returns the subprocess PID, or 0 if the process has not started.
+func (s *ptySession) PID() int {
+	if s.cmd == nil || s.cmd.Process == nil {
+		return 0
+	}
+	return s.cmd.Process.Pid
+}

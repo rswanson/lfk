@@ -35,6 +35,10 @@ func runIdleBackground(parent context.Context, cfg scenarioConfig, terminalApp s
 	}
 	defer sess.Close()
 
+	if cfg.onProcessStart != nil {
+		cfg.onProcessStart(sess.PID())
+	}
+
 	// Give the target ~1s to start drawing before we unfocus.
 	time.Sleep(time.Second)
 	if err := unfocusTerminal(ctx, terminalApp); err != nil {
