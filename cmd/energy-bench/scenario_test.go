@@ -44,3 +44,14 @@ func TestScenarioIdleBackground_BuildsOsascriptArgs(t *testing.T) {
 	assert.Equal(t, "-e", args[0])
 	assert.Contains(t, args[1], "Finder")
 }
+
+func TestScriptedSteps_AreInterpreted(t *testing.T) {
+	steps := []scriptedStep{
+		{key: "j", repeat: 3, pauseMs: 50},
+		{key: "enter", pauseMs: 100},
+	}
+	exp := expandScript(steps)
+	assert.Len(t, exp, 4)
+	assert.Equal(t, "j", exp[0].out)
+	assert.Equal(t, "\r", exp[3].out)
+}
