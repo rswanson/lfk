@@ -6,10 +6,11 @@ import (
 )
 
 type scenarioConfig struct {
-	binary      string
-	args        []string
-	env         []string
-	durationSec int
+	binary         string
+	args           []string
+	env            []string
+	durationSec    int
+	onProcessStart func(pid int) // optional; called once after the subprocess starts
 }
 
 // runIdleForeground launches the target, waits durationSec, and returns.
@@ -24,6 +25,10 @@ func runIdleForeground(parent context.Context, cfg scenarioConfig) error {
 		return err
 	}
 	defer sess.Close()
+
+	if cfg.onProcessStart != nil {
+		cfg.onProcessStart(sess.PID())
+	}
 
 	select {
 	case <-time.After(time.Duration(cfg.durationSec) * time.Second):

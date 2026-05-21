@@ -10,12 +10,13 @@ type primaryMetrics struct {
 }
 
 type Report struct {
-	Scenario    string         `json:"scenario"`
-	Fixture     string         `json:"fixture"`
-	Contexts    int            `json:"contexts"`
-	DurationSec int            `json:"duration_s"`
-	Reps        int            `json:"reps"`
-	Primary     primaryMetrics `json:"primary"`
+	Scenario    string           `json:"scenario"`
+	Fixture     string           `json:"fixture"`
+	Contexts    int              `json:"contexts"`
+	DurationSec int              `json:"duration_s"`
+	Reps        int              `json:"reps"`
+	Primary     primaryMetrics   `json:"primary"`
+	Probe       *ProbeAggregates `json:"probe,omitempty"`
 }
 
 type reportInputs struct {
@@ -26,6 +27,7 @@ type reportInputs struct {
 	Reps        int
 	Top         []topSample
 	Power       powermetricsSample
+	Probe       *ProbeAggregates
 }
 
 func buildReport(in reportInputs) Report {
@@ -50,6 +52,7 @@ func buildReport(in reportInputs) Report {
 			PCoreActiveResidency: in.Power.PCoreActiveResidency,
 			ECoreActiveResidency: in.Power.ECoreActiveResidency,
 		},
+		Probe: in.Probe,
 	}
 }
 
