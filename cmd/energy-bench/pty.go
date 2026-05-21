@@ -75,6 +75,8 @@ func (s *ptySession) Close() {
 }
 
 // PID returns the subprocess PID, or 0 if the process has not started.
+// The PID may refer to an already-exited process if the subprocess exits
+// before the caller uses the value; callers must handle that case.
 func (s *ptySession) PID() int {
 	if s.cmd == nil || s.cmd.Process == nil {
 		return 0

@@ -16,6 +16,10 @@ func TestScenarios_FireOnProcessStart(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("PTY scenarios are darwin/linux only")
 	}
+	t.Setenv("LFK_TEST_DISABLE_UNFOCUS", "1")
+	// On Linux, runIdleBackground's unfocusTerminal is already a no-op
+	// (non-darwin guard); on macOS the LFK_TEST_DISABLE_UNFOCUS env var
+	// set above suppresses the osascript call.
 	cases := []struct {
 		name string
 		run  func(context.Context, scenarioConfig) error
@@ -29,7 +33,7 @@ func TestScenarios_FireOnProcessStart(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var calls atomic.Int32
-			var gotPID atomic.Int32
+			var gotPID atomic.Int64
 			cfg := scenarioConfig{
 				binary:      "/bin/cat",
 				args:        nil,
@@ -37,11 +41,11 @@ func TestScenarios_FireOnProcessStart(t *testing.T) {
 				durationSec: 1,
 				onProcessStart: func(pid int) {
 					calls.Add(1)
-					gotPID.Store(int32(pid))
+					gotPID.Store(int64(pid))
 				},
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 			if err := tc.run(ctx, cfg); err != nil {
 				t.Fatalf("scenario error: %v", err)
 			}

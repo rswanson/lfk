@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -18,6 +19,9 @@ func osascriptUnfocusArgs(terminalApp string) []string {
 func unfocusTerminal(parent context.Context, terminalApp string) error {
 	if runtime.GOOS != "darwin" {
 		return nil // best-effort on non-macOS
+	}
+	if os.Getenv("LFK_TEST_DISABLE_UNFOCUS") == "1" {
+		return nil
 	}
 	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
 	defer cancel()
