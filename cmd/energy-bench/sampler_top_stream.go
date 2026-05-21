@@ -52,11 +52,12 @@ func topArgs(interval time.Duration) []string {
 }
 
 // Start launches the subprocess and begins collecting samples for the given PID.
-// Returns an error if the process cannot start.
+// Returns nil silently if the sampler was already started or has already been
+// stopped (the sampler is one-shot).
 func (s *topStreamSampler) Start(ctx context.Context, pid int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.started {
+	if s.started || s.stopped {
 		return nil
 	}
 	s.started = true
