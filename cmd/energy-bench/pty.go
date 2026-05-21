@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/creack/pty"
@@ -66,11 +67,21 @@ func (s *ptySession) ReadUntil(needle string, timeout time.Duration) (string, er
 	return "", errors.New("timeout waiting for " + needle)
 }
 
+// probeFlushGrace is the time we give lfk's SIGUSR1 handler to write the
+// probe JSONL file before we SIGKILL. The handler does one file write, so
+// this is conservative; raise it if probe data turns up missing.
+const probeFlushGrace = 250 * time.Millisecond
+
 func (s *ptySession) Close() {
-	_ = s.tty.Close()
 	if s.cmd.Process != nil {
+		// SIGUSR1 triggers lfk's probe.FlushOnSignal handler, which
+		// writes the probe ring buffer to JSONL. SIGKILL skips defers,
+		// so without this the probe never flushes when driven via PTY.
+		_ = s.cmd.Process.Signal(syscall.SIGUSR1)
+		time.Sleep(probeFlushGrace)
 		_ = s.cmd.Process.Kill()
 	}
+	_ = s.tty.Close()
 	_ = s.cmd.Wait()
 }
 
