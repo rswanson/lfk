@@ -1,0 +1,66 @@
+Processes: 1003 total, 3 running, 1000 sleeping, 6251 threads 
+2026/05/21 17:07:57
+Load Avg: 5.86, 9.62, 8.66 
+CPU usage: 6.75% user, 12.88% sys, 80.35% idle 
+SharedLibs: 1350M resident, 199M data, 149M linkedit.
+MemRegions: 1007139 total, 15G resident, 592M private, 13G shared.
+PhysMem: 46G used (3994M wired, 5636M compressor), 1571M unused.
+VM: 484T vsize, 6144M framework vsize, 843864(0) swapins, 1313192(0) swapouts.
+Networks: packets: 181269855/191G in, 152454955/145G out.
+Disks: 874587459/5038G read, 59472640/2107G written.
+
+PID    %CPU CSW   
+99474  0.0  555   
+99046  0.0  607   
+99045  0.0  1431  
+98536  0.0  3215  
+97654  0.0  688   
+94111  0.0  25142 
+94106  0.0  96173 
+94100  0.0  43620 
+94098  0.0  196845
+94089  0.0  266790
+Processes: 1003 total, 4 running, 999 sleeping, 6335 threads 
+2026/05/21 17:07:58
+Load Avg: 5.86, 9.62, 8.66 
+CPU usage: 8.65% user, 9.27% sys, 82.6% idle 
+SharedLibs: 1350M resident, 199M data, 149M linkedit.
+MemRegions: 0 total, 0B resident, 592M private, 13G shared.
+PhysMem: 46G used (4193M wired, 5636M compressor), 1490M unused.
+VM: 484T vsize, 6144M framework vsize, 843864(0) swapins, 1313192(0) swapouts.
+Networks: packets: 181270091/191G in, 152455262/145G out.
+Disks: 874589993/5038G read, 59472731/2107G written.
+
+PID    %CPU CSW       
+36326  56.7 52702169+ 
+617    32.6 710558144+
+36325  14.7 15861890+ 
+0      13.1 2147483647
+45486  9.2  842546+   
+52766  8.6  38+       
+8174   8.5  2579529+  
+15104  8.4  5607970+  
+12036  4.9  7067830+  
+41981  4.6  179286+   
+Processes: 1003 total, 3 running, 1 stuck, 999 sleeping, 6326 threads 
+2026/05/21 17:07:59
+Load Avg: 5.55, 9.50, 8.62 
+CPU usage: 8.37% user, 7.85% sys, 83.76% idle 
+SharedLibs: 1350M resident, 199M data, 149M linkedit.
+MemRegions: 0 total, 0B resident, 592M private, 13G shared.
+PhysMem: 46G used (4014M wired, 5636M compressor), 1573M unused.
+VM: 484T vsize, 6144M framework vsize, 843864(0) swapins, 1313192(0) swapouts.
+Networks: packets: 181270173/191G in, 152455383/145G out.
+Disks: 874592443/5038G read, 59472732/2107G written.
+
+PID    %CPU CSW       
+36326  74.4 52705905+ 
+617    39.2 710560633+
+8174   16.1 2580875+  
+15104  15.4 5609465+  
+0      13.4 2147483647
+52766  10.4 40+       
+45486  8.7  843548+   
+12036  6.8  7069196+  
+36325  6.1  15862080+ 
+61390  4.3  51170118+ 
