@@ -20,15 +20,14 @@ type Sample struct {
 
 const defaultRingCapacity = 4096
 
-var schedMetric = []metrics.Sample{{Name: "/sched/latency:seconds"}}
-var gcCPUMetric = []metrics.Sample{{Name: "/cpu/classes/gc/total:cpu-seconds"}}
-
 func (p *Probe) startSampler() {
 	p.ring = make([]Sample, 0, p.ringCap)
+	p.wg.Add(1)
 	go p.sampleLoop()
 }
 
 func (p *Probe) sampleLoop() {
+	defer p.wg.Done()
 	t := time.NewTicker(p.tickInterval)
 	defer t.Stop()
 	for {
@@ -44,18 +43,18 @@ func (p *Probe) sampleLoop() {
 func (p *Probe) collectSample() Sample {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	metrics.Read(schedMetric)
-	metrics.Read(gcCPUMetric)
+	metrics.Read(p.schedSamples)
+	metrics.Read(p.gcCPUSamples)
 
 	p99 := 0.0
-	if schedMetric[0].Value.Kind() == metrics.KindFloat64Histogram {
-		if h := schedMetric[0].Value.Float64Histogram(); h != nil {
+	if p.schedSamples[0].Value.Kind() == metrics.KindFloat64Histogram {
+		if h := p.schedSamples[0].Value.Float64Histogram(); h != nil {
 			p99 = histP99(h)
 		}
 	}
 	gcCPU := 0.0
-	if gcCPUMetric[0].Value.Kind() == metrics.KindFloat64 {
-		gcCPU = gcCPUMetric[0].Value.Float64()
+	if p.gcCPUSamples[0].Value.Kind() == metrics.KindFloat64 {
+		gcCPU = p.gcCPUSamples[0].Value.Float64()
 	}
 
 	return Sample{
@@ -118,15 +117,4 @@ func histP99(h *metrics.Float64Histogram) float64 {
 		}
 	}
 	return h.Buckets[len(h.Buckets)-1]
-}
-
-func (p *Probe) setTickIntervalForTest(d time.Duration) {
-	p.tickInterval = d
-}
-
-func (p *Probe) setRingCapacityForTest(n int) {
-	p.ringMu.Lock()
-	p.ringCap = n
-	p.ring = make([]Sample, 0, n)
-	p.ringMu.Unlock()
 }

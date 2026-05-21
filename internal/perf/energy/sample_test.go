@@ -9,12 +9,10 @@ import (
 )
 
 func TestSampler_CapturesAtLeastOneSampleIn200ms(t *testing.T) {
-	t.Setenv("LFK_ENERGY_PROBE", "1")
-	p, err := Start()
+	p, err := startForTest(20*time.Millisecond, defaultRingCapacity)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = p.Stop() })
 
-	p.setTickIntervalForTest(20 * time.Millisecond)
 	time.Sleep(200 * time.Millisecond)
 
 	samples := p.snapshotSamples()
@@ -25,13 +23,10 @@ func TestSampler_CapturesAtLeastOneSampleIn200ms(t *testing.T) {
 }
 
 func TestSampler_RingBufferDropsOldest(t *testing.T) {
-	t.Setenv("LFK_ENERGY_PROBE", "1")
-	p, err := Start()
+	p, err := startForTest(10*time.Millisecond, 4)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = p.Stop() })
 
-	p.setRingCapacityForTest(4)
-	p.setTickIntervalForTest(10 * time.Millisecond)
 	time.Sleep(150 * time.Millisecond)
 
 	samples := p.snapshotSamples()
