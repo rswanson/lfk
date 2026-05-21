@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/janosmiko/lfk/internal/k8s"
+	"github.com/janosmiko/lfk/internal/perf/energy"
 	"github.com/janosmiko/lfk/internal/ui"
 )
 
@@ -25,7 +26,7 @@ const syncWaveSpinnerInterval = 100 * time.Millisecond
 // The handler stops scheduling further ticks once data.Loading is
 // false, so no goroutines accumulate after the wave-map fetch lands.
 func scheduleSyncWaveSpinnerTick(token uint64) tea.Cmd {
-	return tea.Tick(syncWaveSpinnerInterval, func(time.Time) tea.Msg {
+	return energy.Tick("sync-wave-spinner", syncWaveSpinnerInterval, func(time.Time) tea.Msg {
 		return syncWaveSpinnerTickMsg{token: token}
 	})
 }
@@ -111,7 +112,7 @@ func (m Model) updateSyncWaveTimeline(msg syncWaveTimelineMsg) (tea.Model, tea.C
 
 	if m.syncWave.data.LivePhase == "Running" {
 		token := m.syncWave.token
-		return m, tea.Tick(syncWaveRefreshInterval, func(time.Time) tea.Msg {
+		return m, energy.Tick("sync-wave-refresh-recur", syncWaveRefreshInterval, func(time.Time) tea.Msg {
 			return syncWaveTickMsg{token: token}
 		})
 	}
@@ -131,7 +132,7 @@ func withSyncWaveAutoRefresh(m Model, base tea.Cmd) tea.Cmd {
 		return base
 	}
 	token := m.syncWave.token
-	tick := tea.Tick(syncWaveRefreshInterval, func(time.Time) tea.Msg {
+	tick := energy.Tick("sync-wave-refresh-init", syncWaveRefreshInterval, func(time.Time) tea.Msg {
 		return syncWaveTickMsg{token: token}
 	})
 	return tea.Batch(base, tick)

@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/janosmiko/lfk/internal/model"
+	"github.com/janosmiko/lfk/internal/perf/energy"
 )
 
 //nolint:unparam // tea.Cmd return is part of the msg-handler convention; may carry cmds in future
@@ -114,7 +115,7 @@ func (m Model) updateCaptureUpdate(_ captureUpdateMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) scheduleCaptureTick(id int) tea.Cmd {
-	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
+	return energy.Tick("capture-100ms", 100*time.Millisecond, func(t time.Time) tea.Msg {
 		return captureLiveTickMsg{id: id}
 	})
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/creack/pty"
 	"github.com/hinshun/vt10x"
 	"github.com/janosmiko/lfk/internal/logger"
+	"github.com/janosmiko/lfk/internal/perf/energy"
 )
 
 // execPTYTickMsg triggers a re-render of the embedded terminal.
@@ -72,7 +73,7 @@ func ptyStartErrorForOS(err error, goos string) error {
 // scheduleExecTick schedules the next terminal refresh tick.
 func (m Model) scheduleExecTick() tea.Cmd {
 	ptmx := m.execPTY
-	return tea.Tick(50*time.Millisecond, func(t time.Time) tea.Msg {
+	return energy.Tick("ptyexec-50ms", 50*time.Millisecond, func(t time.Time) tea.Msg {
 		return execPTYTickMsg{ptmx: ptmx}
 	})
 }
