@@ -38,6 +38,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleMouse(msg)
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+	case tea.BlurMsg:
+		return m.updateBlur(msg)
+	case tea.FocusMsg:
+		return m.updateFocus(msg)
 	case spinner.TickMsg:
 		return m.updateTick(msg)
 	case stderrCapturedMsg:
