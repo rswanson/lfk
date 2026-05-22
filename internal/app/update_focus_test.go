@@ -184,3 +184,50 @@ func TestModel_SnapBackIfIdle_NonNilWhenFocusedAndIdle(t *testing.T) {
 		t.Error("snapBackIfIdle = nil, want non-nil when foreground-idle")
 	}
 }
+
+func TestUpdate_KeyMsgUpdatesLastInputAt(t *testing.T) {
+	stale := time.Now().Add(-2 * foregroundIdleThreshold)
+	m := Model{focused: true, watchInterval: 2 * time.Second, lastInputAt: stale}
+	out, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	mod, ok := out.(Model)
+	if !ok {
+		t.Fatalf("Update returned %T, want Model", out)
+	}
+	if !mod.lastInputAt.After(stale) {
+		t.Errorf("lastInputAt = %v, want > %v", mod.lastInputAt, stale)
+	}
+}
+
+func TestUpdate_KeyMsgAfterIdleEmitsSnapBackCmd(t *testing.T) {
+	m := Model{
+		focused:       true,
+		watchMode:     true,
+		watchInterval: 2 * time.Second,
+		lastInputAt:   time.Now().Add(-2 * foregroundIdleThreshold),
+	}
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	if cmd == nil {
+		t.Fatal("KeyMsg after idle: cmd was nil; expected snap-back batched with handler cmd")
+	}
+	// We don't introspect cmd internals -- coverage is via integration
+	// with refreshCurrentLevel + scheduleWatchTick which have their own tests.
+}
+
+func TestUpdate_FocusMsgUpdatesLastInputAt(t *testing.T) {
+	// Regression guard: FocusMsg must set lastInputAt so a user who
+	// returns to a window they left idle for >120s isn't immediately
+	// re-marked as idle.
+	stale := time.Now().Add(-2 * foregroundIdleThreshold)
+	m := Model{focused: false, watchInterval: 2 * time.Second, lastInputAt: stale}
+	out, _ := m.Update(tea.FocusMsg{})
+	mod, ok := out.(Model)
+	if !ok {
+		t.Fatalf("Update returned %T, want Model", out)
+	}
+	if !mod.lastInputAt.After(stale) {
+		t.Errorf("lastInputAt after FocusMsg = %v, want > %v", mod.lastInputAt, stale)
+	}
+	if mod.foregroundIdle() {
+		t.Error("foregroundIdle = true right after FocusMsg; should be false")
+	}
+}
