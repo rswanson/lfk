@@ -38,6 +38,9 @@ func TestUpdate_FocusMsgFlipsFocusedAndEmitsRefresh(t *testing.T) {
 	// We don't assert on cmd's internals; behaviour is verified by the
 	// fact that a non-nil command is returned and refreshCurrentLevel is
 	// covered by its own tests.
+	if got := mod.activeWatchInterval(); got != m.watchInterval {
+		t.Errorf("activeWatchInterval after FocusMsg = %v, want %v (foreground interval)", got, m.watchInterval)
+	}
 }
 
 func TestUpdate_FocusMsgStillEmitsCmdWhenWatchModeOff(t *testing.T) {
@@ -67,5 +70,29 @@ func TestModel_ActiveWatchInterval_BlurredReturnsBlurredConst(t *testing.T) {
 func TestModel_ActiveWatchInterval_BlurredConstIs30s(t *testing.T) {
 	if blurredWatchInterval != 30*time.Second {
 		t.Errorf("blurredWatchInterval = %v, want 30s (spec)", blurredWatchInterval)
+	}
+}
+
+func TestUpdate_BlurThenFocusReturnsToForegroundInterval(t *testing.T) {
+	// Sequence flow: focused start, BlurMsg flips to blurred interval,
+	// FocusMsg snaps back to the configured foreground interval.
+	m := Model{focused: true, watchInterval: 2 * time.Second, watchMode: true}
+
+	afterBlur, _ := m.Update(tea.BlurMsg{})
+	mBlur, ok := afterBlur.(Model)
+	if !ok {
+		t.Fatalf("after BlurMsg: got %T, want Model", afterBlur)
+	}
+	if got := mBlur.activeWatchInterval(); got != blurredWatchInterval {
+		t.Errorf("activeWatchInterval after BlurMsg = %v, want %v", got, blurredWatchInterval)
+	}
+
+	afterFocus, _ := mBlur.Update(tea.FocusMsg{})
+	mFocus, ok := afterFocus.(Model)
+	if !ok {
+		t.Fatalf("after FocusMsg: got %T, want Model", afterFocus)
+	}
+	if got := mFocus.activeWatchInterval(); got != m.watchInterval {
+		t.Errorf("activeWatchInterval after FocusMsg = %v, want %v", got, m.watchInterval)
 	}
 }

@@ -21,5 +21,12 @@ func (m Model) updateBlur(_ tea.BlurMsg) (tea.Model, tea.Cmd) {
 // refreshCurrentLevel call is redundant but cheap.
 func (m Model) updateFocus(_ tea.FocusMsg) (tea.Model, tea.Cmd) {
 	m.focused = true
-	return m, tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.activeWatchInterval()))
+	// suppressBgtasks mirrors updateWatchTick's pattern: trackBgTask
+	// captures the flag synchronously at command construction, so we
+	// only need it true for the duration of refreshCurrentLevel().
+	// Reset before return so it doesn't leak into subsequent Updates.
+	m.suppressBgtasks = true
+	cmd := tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.activeWatchInterval()))
+	m.suppressBgtasks = false
+	return m, cmd
 }
