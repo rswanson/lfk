@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -21,6 +23,9 @@ func (m Model) updateBlur(_ tea.BlurMsg) (tea.Model, tea.Cmd) {
 // refreshCurrentLevel call is redundant but cheap.
 func (m Model) updateFocus(_ tea.FocusMsg) (tea.Model, tea.Cmd) {
 	m.focused = true
+	// Regaining focus counts as user activity: reset the idle clock so
+	// activeWatchInterval() returns the foreground interval immediately.
+	m.lastInputAt = time.Now()
 	// suppressBgtasks mirrors updateWatchTick's pattern: trackBgTask
 	// captures the flag synchronously at command construction, so we
 	// only need it true for the duration of refreshCurrentLevel().

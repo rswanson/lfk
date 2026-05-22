@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -51,6 +52,7 @@ func NewModel(client *k8s.Client, opts StartupOptions) Model {
 		spinner:                    s,
 		watchInterval:              watchInterval,
 		focused:                    true,
+		lastInputAt:                time.Now(),
 		splitPreview:               true,
 		allNamespaces:              true,
 		watchMode:                  true,

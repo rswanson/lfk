@@ -88,16 +88,40 @@ func scheduleStartupTip() tea.Cmd {
 // spec (docs/superpowers/specs/2026-05-21-focus-out-handling-design.md).
 const blurredWatchInterval = 30 * time.Second
 
+// foregroundIdleThreshold is how long the watch tick waits with no key
+// or mouse input before slowing the cadence to blurredWatchInterval.
+// 120s matches the design spec.
+const foregroundIdleThreshold = 120 * time.Second
+
 // activeWatchInterval returns the interval scheduleWatchTick should use
 // right now: m.watchInterval when the terminal reports focus, or
 // blurredWatchInterval when it has sent tea.BlurMsg. Callers that
 // schedule a watch tick should call this rather than reading
 // m.watchInterval directly.
 func (m Model) activeWatchInterval() time.Duration {
-	if !m.focused {
+	if !m.focused || m.foregroundIdle() {
 		return blurredWatchInterval
 	}
 	return m.watchInterval
+}
+
+// foregroundIdle reports whether the user has been inactive
+// (no KeyMsg or MouseMsg) for longer than foregroundIdleThreshold.
+// It is independent of m.focused; the activeWatchInterval and
+// snapBackIfIdle callers compose the two signals.
+func (m Model) foregroundIdle() bool {
+	return time.Since(m.lastInputAt) > foregroundIdleThreshold
+}
+
+// snapBackIfIdle returns the cmd needed to leave foreground-idle: an
+// immediate refresh + a watch-tick reschedule at the foreground
+// interval. Returns nil when not idle or when blurred (PR-4 owns that
+// path; double-snapping would be redundant).
+func (m Model) snapBackIfIdle() tea.Cmd {
+	if !m.focused || !m.foregroundIdle() {
+		return nil
+	}
+	return tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.watchInterval))
 }
 
 // scheduleWatchTick returns a command that sends a watchTickMsg after the interval.

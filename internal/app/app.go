@@ -49,10 +49,9 @@ type Model struct {
 	// loadResources uses it to decide whether a primed cache entry is
 	// still applicable: if the current fingerprint matches, the fetch can
 	// be served from cache instead of hitting the API. This is populated
-	// only by updateResourcesLoadedPreview and updateResourcesLoadedMain
-	// — the paths that fetch data under the current state. Other writers
-	// (session restore, bookmarks, toggleRare rebuild) leave the entry
-	// without a fingerprint, which safely defaults to a real fetch.
+	// only by updateResourcesLoadedPreview and updateResourcesLoadedMain.
+	// Other writers leave the entry without a fingerprint, which safely
+	// defaults to a real fetch.
 	cacheFingerprints map[string]string
 
 	// Preview / YAML content for the right column or full screen view.
@@ -184,6 +183,11 @@ type Model struct {
 	watchInterval time.Duration
 	// focused is set/cleared by tea.FocusMsg/tea.BlurMsg; drives activeWatchInterval().
 	focused bool
+	// lastInputAt is the timestamp of the most recent KeyMsg or MouseMsg. Used
+	// by activeWatchInterval() to detect foreground-idle (no input for
+	// foregroundIdleThreshold). Initialised in NewModel so a freshly
+	// constructed Model is never idle.
+	lastInputAt time.Time
 	// Read-only mode: blocks all mutating actions for the active tab. Mirrors
 	// the active TabState.readOnly; re-evaluated on context switch and tab
 	// switch.
@@ -467,10 +471,8 @@ type Model struct {
 	// Discovered CRDs per context (unsynchronized: only the bubbletea update goroutine writes).
 	discoveredResources map[string][]model.ResourceTypeEntry
 
-	// Contexts with an in-flight API discovery call. Used to avoid
-	// spamming the cluster API (and its OIDC auth flow) when the user
-	// rapidly cursors through many contexts at the cluster list. Entries
-	// are added when discoverAPIResources is kicked off and removed in
+	// Contexts with an in-flight API discovery call. Entries are added
+	// when discoverAPIResources is kicked off and removed in
 	// updateAPIResourceDiscovery when the result arrives.
 	discoveringContexts map[string]bool
 
@@ -685,12 +687,9 @@ type Model struct {
 	queryHistory                 *commandHistory // shared by explorer / search and f filter
 
 	// Cached namespace names for command bar autocompletion, keyed by
-	// context name. Each tab may have its own nav.Context, so keying by
-	// context keeps completions correct when switching tabs or running
-	// `:ctx` within a tab. Entries carry a fetchedAt timestamp so the
-	// command bar can refresh them after namespaceCacheTTL without
-	// refetching on every open (stale-while-revalidate: the old entry
-	// stays visible while the refresh runs).
+	// context name. Each tab may have its own nav.Context so keying by
+	// context keeps completions correct when switching tabs. Entries carry
+	// a fetchedAt timestamp for stale-while-revalidate refresh on open.
 	cachedNamespaces map[string]namespaceCacheEntry
 
 	// Async resource name cache for cross-namespace kubectl completion.
