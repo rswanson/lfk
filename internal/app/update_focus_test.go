@@ -96,3 +96,21 @@ func TestUpdate_BlurThenFocusReturnsToForegroundInterval(t *testing.T) {
 		t.Errorf("activeWatchInterval after FocusMsg = %v, want %v", got, m.watchInterval)
 	}
 }
+
+func TestSuppressBgtasksFlagDoesNotLeakAfterFocusMsg(t *testing.T) {
+	// Mirror of TestSuppressBgtasksFlagDoesNotLeakAfterWatchTick — guards
+	// the same value-receiver pattern in updateFocus.
+	m := Model{focused: false, watchInterval: 2 * time.Second, watchMode: true}
+	if m.suppressBgtasks {
+		t.Fatal("precondition: suppressBgtasks should start false")
+	}
+
+	out, _ := m.Update(tea.FocusMsg{})
+	updated, ok := out.(Model)
+	if !ok {
+		t.Fatalf("Update returned %T, want Model", out)
+	}
+	if updated.suppressBgtasks {
+		t.Error("suppressBgtasks leaked: still true on the model returned from FocusMsg")
+	}
+}
