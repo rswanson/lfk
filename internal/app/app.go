@@ -182,7 +182,8 @@ type Model struct {
 	// Watch mode: auto-refresh the current view on a timer.
 	watchMode     bool
 	watchInterval time.Duration
-
+	// focused is set/cleared by tea.FocusMsg/tea.BlurMsg; drives activeWatchInterval().
+	focused bool
 	// Read-only mode: blocks all mutating actions for the active tab. Mirrors
 	// the active TabState.readOnly; re-evaluated on context switch and tab
 	// switch.

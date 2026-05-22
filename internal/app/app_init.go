@@ -50,6 +50,7 @@ func NewModel(client *k8s.Client, opts StartupOptions) Model {
 		namespace:                  defaultNS,
 		spinner:                    s,
 		watchInterval:              watchInterval,
+		focused:                    true,
 		splitPreview:               true,
 		allNamespaces:              true,
 		watchMode:                  true,
