@@ -1,0 +1,22 @@
+*** Sampled system activity (Fri May 22 09:15:44 2026 -0400) (1019.22ms elapsed) ***
+
+*** Running tasks ***
+
+Name                               ID     CPU ms/s  User%  Deadlines (<2 ms, 2-5 ms)  Wakeups (Intr, Pkg idle)
+lfk                                12345  30.55     3.26   0.00    0.00               0.98    0.00
+
+*** Processor usage ***
+
+E-Cluster Online: 100%
+E-Cluster HW active frequency: 1122 MHz
+E-Cluster HW active residency:  50.00% (1020 MHz:  91% 1404 MHz: 1.4%)
+E-Cluster idle residency:   50.00%
+E-Cluster down residency:    0.00%
+
+P0-Cluster HW active residency:  10.00% (1260 MHz: 3% 4512 MHz: 1%)
+CPU 4 frequency: 0 MHz
+CPU 4 active residency:   0.00%
+
+P1-Cluster HW active residency:  20.00% (1260 MHz: 3.7% 4512 MHz: 1.6%)
+CPU 9 frequency: 2685 MHz
+CPU 9 active residency:   5.07%

@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"runtime/metrics"
 	"time"
+
+	"github.com/janosmiko/lfk/internal/qos"
 )
 
 // Sample holds a point-in-time snapshot of runtime metrics.
@@ -24,7 +26,7 @@ const defaultRingCapacity = 4096
 func (p *Probe) startSampler() {
 	p.ring = make([]Sample, 0, p.ringCap)
 	p.wg.Add(1)
-	go p.sampleLoop()
+	go qos.RunWith(qos.Background, p.sampleLoop)
 }
 
 func (p *Probe) sampleLoop() {
