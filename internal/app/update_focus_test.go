@@ -5,6 +5,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/janosmiko/lfk/internal/ui"
 )
 
 func TestUpdate_BlurMsgFlipsFocused(t *testing.T) {
@@ -60,31 +62,41 @@ func TestModel_ActiveWatchInterval_FocusedReturnsConfigured(t *testing.T) {
 	}
 }
 
-func TestModel_ActiveWatchInterval_BlurredReturnsBlurredConst(t *testing.T) {
-	m := Model{watchInterval: 3 * time.Second, focused: false}
-	if got := m.activeWatchInterval(); got != blurredWatchInterval {
-		t.Errorf("blurred: got %v, want %v", got, blurredWatchInterval)
+func TestModel_ActiveWatchInterval_BlurredReturnsBlurredField(t *testing.T) {
+	m := Model{watchInterval: 3 * time.Second, blurredWatchInterval: 30 * time.Second, focused: false}
+	if got := m.activeWatchInterval(); got != 30*time.Second {
+		t.Errorf("blurred: got %v, want 30s", got)
 	}
 }
 
-func TestModel_ActiveWatchInterval_BlurredConstIs30s(t *testing.T) {
-	if blurredWatchInterval != 30*time.Second {
-		t.Errorf("blurredWatchInterval = %v, want 30s (spec)", blurredWatchInterval)
+func TestModel_ActiveWatchInterval_UsesConfiguredBlurredInterval(t *testing.T) {
+	// A user watching a visible-but-unfocused window can lower the blurred
+	// interval so the view stays fresh; activeWatchInterval must honour it
+	// rather than a hard-coded 30s.
+	m := Model{watchInterval: 2 * time.Second, blurredWatchInterval: 5 * time.Second, focused: false}
+	if got := m.activeWatchInterval(); got != 5*time.Second {
+		t.Errorf("blurred with configured interval: got %v, want 5s", got)
+	}
+}
+
+func TestModel_DefaultBlurredWatchIntervalIs30s(t *testing.T) {
+	if ui.DefaultBlurredWatchInterval != 30*time.Second {
+		t.Errorf("ui.DefaultBlurredWatchInterval = %v, want 30s (spec)", ui.DefaultBlurredWatchInterval)
 	}
 }
 
 func TestUpdate_BlurThenFocusReturnsToForegroundInterval(t *testing.T) {
 	// Sequence flow: focused start, BlurMsg flips to blurred interval,
 	// FocusMsg snaps back to the configured foreground interval.
-	m := Model{focused: true, watchInterval: 2 * time.Second, watchMode: true}
+	m := Model{focused: true, watchInterval: 2 * time.Second, blurredWatchInterval: 30 * time.Second, watchMode: true}
 
 	afterBlur, _ := m.Update(tea.BlurMsg{})
 	mBlur, ok := afterBlur.(Model)
 	if !ok {
 		t.Fatalf("after BlurMsg: got %T, want Model", afterBlur)
 	}
-	if got := mBlur.activeWatchInterval(); got != blurredWatchInterval {
-		t.Errorf("activeWatchInterval after BlurMsg = %v, want %v", got, blurredWatchInterval)
+	if got := mBlur.activeWatchInterval(); got != 30*time.Second {
+		t.Errorf("activeWatchInterval after BlurMsg = %v, want 30s", got)
 	}
 
 	afterFocus, _ := mBlur.Update(tea.FocusMsg{})
@@ -137,12 +149,13 @@ func TestModel_ForegroundIdleThresholdIs120s(t *testing.T) {
 
 func TestModel_ActiveWatchInterval_IdleAndFocusedReturnsBlurred(t *testing.T) {
 	m := Model{
-		watchInterval: 2 * time.Second,
-		focused:       true,
-		lastInputAt:   time.Now().Add(-2 * foregroundIdleThreshold),
+		watchInterval:        2 * time.Second,
+		blurredWatchInterval: 30 * time.Second,
+		focused:              true,
+		lastInputAt:          time.Now().Add(-2 * foregroundIdleThreshold),
 	}
-	if got := m.activeWatchInterval(); got != blurredWatchInterval {
-		t.Errorf("idle+focused: got %v, want %v", got, blurredWatchInterval)
+	if got := m.activeWatchInterval(); got != 30*time.Second {
+		t.Errorf("idle+focused: got %v, want 30s", got)
 	}
 }
 

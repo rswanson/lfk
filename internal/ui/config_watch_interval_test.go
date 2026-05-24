@@ -101,3 +101,59 @@ func TestLoadConfig_WatchInterval(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadConfig_BlurredWatchInterval(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		want    time.Duration
+		comment string
+	}{
+		{
+			name:    "valid 5s keeps view fresh while unfocused",
+			yaml:    "blurred_watch_interval: 5s\n",
+			want:    5 * time.Second,
+			comment: "parses cleanly",
+		},
+		{
+			name:    "100ms is clamped to 500ms",
+			yaml:    "blurred_watch_interval: 100ms\n",
+			want:    500 * time.Millisecond,
+			comment: "below min clamps up",
+		},
+		{
+			name:    "30m is clamped to 10m",
+			yaml:    "blurred_watch_interval: 30m\n",
+			want:    10 * time.Minute,
+			comment: "above max clamps down",
+		},
+		{
+			name:    "invalid duration falls back to default 30s",
+			yaml:    "blurred_watch_interval: 30d\n",
+			want:    30 * time.Second,
+			comment: "30d is not a valid Go duration",
+		},
+		{
+			name:    "missing field uses default 30s",
+			yaml:    "colorscheme: dracula\n",
+			want:    30 * time.Second,
+			comment: "unset fallback",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			orig := ConfigBlurredWatchInterval
+			t.Cleanup(func() { ConfigBlurredWatchInterval = orig })
+			ConfigBlurredWatchInterval = DefaultBlurredWatchInterval
+
+			dir := t.TempDir()
+			path := filepath.Join(dir, "config.yaml")
+			if err := os.WriteFile(path, []byte(tc.yaml), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			LoadConfig(path)
+			assert.Equal(t, tc.want, ConfigBlurredWatchInterval, tc.comment)
+		})
+	}
+}

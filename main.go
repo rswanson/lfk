@@ -59,6 +59,7 @@ File locations:
 	rootCmd.Flags().BoolVar(&cliOpts.NoColor, "no-color", false, "Disable foreground/background colors; keep bold/reverse for visibility. Also honors the NO_COLOR env var.")
 	rootCmd.Flags().BoolVar(&cliOpts.ReadOnly, "read-only", false, "Disable all mutating actions (delete/edit/scale/restart/exec/port-forward/drain/cordon). Also configurable as read_only: true (global) or clusters.<ctx>.read_only (per-context) in config.")
 	rootCmd.Flags().DurationVar(&cliOpts.WatchInterval, "watch-interval", 0, "Watch mode polling interval (e.g. 500ms, 2s, 1m). Clamped to [500ms, 10m]. Overrides config.")
+	rootCmd.Flags().DurationVar(&cliOpts.BlurredWatchInterval, "blurred-watch-interval", 0, "Watch interval while lfk is unfocused or idle (e.g. 5s, 30s). Clamped to [500ms, 10m]. Lower it to keep a visible-but-unfocused view fresh. Overrides config.")
 
 	completion.RegisterShellCompletions(rootCmd)
 

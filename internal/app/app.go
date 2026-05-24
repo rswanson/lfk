@@ -181,6 +181,10 @@ type Model struct {
 	// Watch mode: auto-refresh the current view on a timer.
 	watchMode     bool
 	watchInterval time.Duration
+	// blurredWatchInterval is the cadence activeWatchInterval() returns while
+	// blurred or foreground-idle. Resolved in NewModel from config/CLI;
+	// defaults to ui.DefaultBlurredWatchInterval.
+	blurredWatchInterval time.Duration
 	// focused is set/cleared by tea.FocusMsg/tea.BlurMsg; drives activeWatchInterval().
 	focused bool
 	// lastInputAt is the timestamp of the most recent KeyMsg or MouseMsg. Used

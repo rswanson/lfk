@@ -83,24 +83,19 @@ func scheduleStartupTip() tea.Cmd {
 	})
 }
 
-// blurredWatchInterval is the watch-tick interval used while the
-// terminal reports the lfk window as unfocused. 30s matches the design
-// spec (docs/superpowers/specs/2026-05-21-focus-out-handling-design.md).
-const blurredWatchInterval = 30 * time.Second
-
 // foregroundIdleThreshold is how long the watch tick waits with no key
-// or mouse input before slowing the cadence to blurredWatchInterval.
+// or mouse input before slowing the cadence to the blurred interval.
 // 120s matches the design spec.
 const foregroundIdleThreshold = 120 * time.Second
 
 // activeWatchInterval returns the interval scheduleWatchTick should use
-// right now: m.watchInterval when the terminal reports focus, or
-// blurredWatchInterval when it has sent tea.BlurMsg. Callers that
-// schedule a watch tick should call this rather than reading
-// m.watchInterval directly.
+// right now: m.watchInterval when the terminal reports focus and the user
+// is active, or m.blurredWatchInterval when the window is unfocused or
+// foreground-idle. Callers that schedule a watch tick should call this
+// rather than reading m.watchInterval directly.
 func (m Model) activeWatchInterval() time.Duration {
 	if !m.focused || m.foregroundIdle() {
-		return blurredWatchInterval
+		return m.blurredWatchInterval
 	}
 	return m.watchInterval
 }

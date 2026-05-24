@@ -305,6 +305,23 @@ load. Tune it with:
 Values outside `[500ms, 10m]` are clamped to the bounds; invalid values fall
 back to 2s.
 
+### Blurred / idle interval
+
+To save battery, lfk slows the watch tick to a separate, longer cadence when
+its window is unfocused (the terminal reports a blur) or when a focused window
+has seen no key or mouse input for 120 seconds. It snaps back to the
+foreground interval the instant the window regains focus or you press a key.
+
+The default blurred cadence is `30s`. If you keep lfk visible but unfocused —
+watching a dashboard on a second monitor, say — that can feel stale. Lower it
+to keep the view fresh, at the cost of more background wakeups:
+
+- **CLI flag:** `lfk --blurred-watch-interval 5s`
+- **Config file:** Add `blurred_watch_interval: 5s` to your config
+
+Same `[500ms, 10m]` clamp as `watch_interval`; invalid values fall back to
+30s. Set it equal to `watch_interval` to effectively disable blur throttling.
+
 ## Discovery Cache
 
 API discovery (the list of resource types and CRDs the server exposes) is

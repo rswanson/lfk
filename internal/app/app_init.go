@@ -36,6 +36,15 @@ func NewModel(client *k8s.Client, opts StartupOptions) Model {
 		watchInterval = ui.DefaultWatchInterval
 	}
 
+	// Blurred/idle interval: same CLI > config > default precedence.
+	blurredWatchInterval := ui.ConfigBlurredWatchInterval
+	if opts.BlurredWatchInterval > 0 {
+		blurredWatchInterval = ui.ClampWatchInterval(opts.BlurredWatchInterval)
+	}
+	if blurredWatchInterval <= 0 {
+		blurredWatchInterval = ui.DefaultBlurredWatchInterval
+	}
+
 	reqCtx, reqCancel := context.WithCancel(context.Background())
 	pinnedSt := loadPinnedState()
 	m := Model{
@@ -51,6 +60,7 @@ func NewModel(client *k8s.Client, opts StartupOptions) Model {
 		namespace:                  defaultNS,
 		spinner:                    s,
 		watchInterval:              watchInterval,
+		blurredWatchInterval:       blurredWatchInterval,
 		focused:                    true,
 		lastInputAt:                time.Now(),
 		splitPreview:               true,

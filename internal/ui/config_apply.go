@@ -170,6 +170,7 @@ func applyConfigOptions(cfg configFile) {
 		ConfigMouse = *cfg.Mouse
 	}
 	applyWatchIntervalConfig(cfg.WatchInterval)
+	applyBlurredWatchIntervalConfig(cfg.BlurredWatchInterval)
 	if cfg.NoColor != nil {
 		ConfigNoColor = *cfg.NoColor
 	}
@@ -218,6 +219,17 @@ func applyWatchIntervalConfig(raw string) {
 	if d, err := time.ParseDuration(raw); err == nil {
 		if clamped := ClampWatchInterval(d); clamped > 0 {
 			ConfigWatchInterval = clamped
+		}
+	}
+}
+
+func applyBlurredWatchIntervalConfig(raw string) {
+	if raw == "" {
+		return
+	}
+	if d, err := time.ParseDuration(raw); err == nil {
+		if clamped := ClampWatchInterval(d); clamped > 0 {
+			ConfigBlurredWatchInterval = clamped
 		}
 	}
 }

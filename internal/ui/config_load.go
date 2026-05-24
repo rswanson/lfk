@@ -99,6 +99,11 @@ type configFile struct {
 	// a Go duration string (e.g. "2s", "500ms", "1m"). Clamped to [500ms, 10m].
 	// Defaults to 2s when unset or invalid.
 	WatchInterval string `json:"watch_interval" yaml:"watch_interval"`
+	// BlurredWatchInterval is the polling interval used while the lfk window
+	// is unfocused or the focused window has gone idle. Same duration-string
+	// form and [500ms, 10m] clamp as watch_interval. Defaults to 30s when
+	// unset or invalid. Lower it to keep a visible-but-unfocused view fresh.
+	BlurredWatchInterval string `json:"blurred_watch_interval" yaml:"blurred_watch_interval"`
 	// Clusters maps context names to per-cluster configuration overrides.
 	Clusters map[string]clusterConfig `json:"clusters" yaml:"clusters"`
 	// NoColor, when true, strips foreground/background colors from all styles
