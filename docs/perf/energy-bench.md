@@ -7,7 +7,7 @@ energy behaviour against checked-in baselines.
 
 ```
 make build
-make energy-bench                                  # default: idle-foreground, 90s, 3 reps
+make energy-bench                                  # default: idle-foreground, 90s, 1 rep
 SCENARIO=active-scripted make energy-bench         # other scenarios
 make energy-bench-all                              # run all three
 ```
@@ -42,9 +42,11 @@ The primary metrics, in order of importance:
    wins that shift work from P to E even when total CPU% doesn't move.
    Only available when running with `-powermetrics` (sudo).
 
-Supporting diagnostics live in the JSONL probe output: goroutine count,
-GC CPU fraction, allocation rate, sched latency p99, and per-callsite
-tick counts.
+Supporting diagnostics are rendered inline in `report.md`: goroutine
+count, GC CPU fraction, allocation rate, sched latency p99, and
+per-callsite tick rates. The raw per-second probe samples are also
+preserved under `$LFK_DATA_DIR/energy/<run-id>.jsonl` for ad-hoc
+analysis (paths.DataDir() determines the prefix).
 
 ## Higher-fidelity runs (sudo)
 
@@ -67,7 +69,7 @@ The in-process probe also runs in normal lfk sessions:
 LFK_ENERGY_PROBE=1 ./lfk
 ```
 
-It writes one JSONL file per session under `$LFK_DATA_DIR/lfk/energy/`,
+It writes one JSONL file per session under `$LFK_DATA_DIR/energy/`,
 flushed on shutdown and on `SIGUSR1`. Useful for ad-hoc investigation
 without the full harness.
 
@@ -79,18 +81,30 @@ without the full harness.
   of a production cluster. Use the harness for branch-vs-baseline
   comparisons, not for absolute energy claims.
 
-## Phase 1 limitations (refined in Phase 2)
+## What the report contains
 
-- `top` sampling is currently a single tail sample taken after the scenario
-  ends, and is NOT filtered to lfk's PID. The numbers in `report.json`
-  reflect system-wide averages, not lfk's specific contribution. Phase 2
-  will switch to concurrent, PID-filtered sampling for accurate per-lfk
-  metrics. Branch-vs-baseline diffs are still meaningful as long as both
-  runs happen under similar system load — but absolute numbers are noisy.
-- The in-process probe (`LFK_ENERGY_PROBE=1`) captures lfk-specific data
-  (goroutines, GC, tick counts) in JSONL form. That data is currently
-  written to the probe's data dir but not yet folded into `report.json`.
-  Phase 2 will aggregate it alongside the macOS samplers.
+The report has three sections:
+
+1. **Primary metrics** — wakeups, energy impact, and (with `-powermetrics`)
+   P/E-core active residency. These come from `top(1)` running concurrently
+   with the scenario, filtered to lfk's PID. They reflect lfk's specific
+   contribution to system energy, not the host's total.
+
+2. **Probe metrics** — goroutines, GC CPU fraction, heap allocation, and
+   scheduler latency. These come from the in-process probe and are only
+   meaningful for the lfk process. Available when `LFK_ENERGY_PROBE=1` is
+   set (the harness sets this automatically).
+
+3. **Tick rates by call site** — the per-second rate at which each
+   labelled `energy.Tick` callback fires. This is the most direct signal
+   for spotting an offending ticker: a high rate on a label that should
+   only fire when its overlay is open means the ticker is leaking.
+
+Note: today the scenario runs exactly once per `energy-bench` invocation
+regardless of `-reps`. The flag is preserved as report metadata so that a
+future revision can implement multi-rep averaging without breaking the
+report schema; for now, treat each run as a single sample. Capture
+several runs manually and compare if variance matters for your decision.
 
 ## Probe overhead verification
 
@@ -112,4 +126,4 @@ Variance on a laptop is high. Before a measurement run:
 - Plug into power (or consistently *not* plug in, but pick one).
 - Quit other CPU-heavy apps.
 - Let the machine sit for ~30 seconds after closing apps before starting.
-- Run with the same `-reps 3` setting both times (current + baseline).
+- Run with the same `-reps 1` setting both times (current + baseline).

@@ -67,6 +67,10 @@ func runActiveScripted(parent context.Context, cfg scenarioConfig) error {
 	}
 	defer sess.Close()
 
+	if cfg.onProcessStart != nil {
+		cfg.onProcessStart(sess.PID())
+	}
+
 	time.Sleep(500 * time.Millisecond) // let UI render
 	script := expandScript(defaultActiveScript())
 	end := time.Now().Add(time.Duration(cfg.durationSec) * time.Second)

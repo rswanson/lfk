@@ -35,7 +35,7 @@ func main() {
 		"scenario: idle-foreground | idle-background | active-scripted")
 	flag.StringVar(&o.fixture, "fixture", "medium", "fixture: small | medium | large")
 	flag.IntVar(&o.contexts, "contexts", 3, "number of kubeconfig contexts")
-	flag.IntVar(&o.repetitions, "reps", 3, "number of repetitions per scenario")
+	flag.IntVar(&o.repetitions, "reps", 1, "number of repetitions per scenario (currently advisory; the scenario runs once)")
 	flag.IntVar(&o.durationSec, "duration", 90, "scenario duration in seconds")
 	flag.StringVar(&o.outDir, "out", "testdata/energy-reports", "output directory")
 	flag.BoolVar(&o.useSudo, "powermetrics", false, "use powermetrics (requires sudo)")
@@ -52,12 +52,10 @@ func run(o opts) error {
 		return fmt.Errorf("binary %q not found: %w", o.binary, err)
 	}
 
-	// 1. Start fake apiserver.
 	fx := selectFixture(o.fixture)
 	srv := fakeapi.New(fx).Start()
 	defer srv.Close()
 
-	// 2. Throwaway kubeconfig.
 	tmp, err := os.MkdirTemp("", "energy-bench-")
 	if err != nil {
 		return err
@@ -68,7 +66,6 @@ func run(o opts) error {
 		return err
 	}
 
-	// 3. Environment for the target process.
 	dataDir := filepath.Join(tmp, "data")
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		return err
@@ -79,14 +76,22 @@ func run(o opts) error {
 		"KUBECONFIG="+kcPath,
 	)
 
-	// 4. Run the scenario.
+	ctx := context.Background()
+	sampler := newTopStreamSampler(topBin(), topArgs(time.Second))
+	defer func() { _ = sampler.Stop() }() // ensure top is killed even if a scenario errors
+
 	cfg := scenarioConfig{
 		binary:      o.binary,
 		args:        nil,
 		env:         env,
 		durationSec: o.durationSec,
+		onProcessStart: func(pid int) {
+			if err := sampler.Start(ctx, pid); err != nil {
+				log.Printf("warning: top sampler failed to start: %v (wakeups/energy will be zero)", err)
+			}
+		},
 	}
-	ctx := context.Background()
+
 	switch o.scenario {
 	case "idle-foreground":
 		err = runIdleForeground(ctx, cfg)
@@ -101,23 +106,18 @@ func run(o opts) error {
 		return err
 	}
 
-	// 5. Sample top/powermetrics. For Phase 1 we take a short tail
-	//    sample. Future revisions can run sampling concurrently with
-	//    the scenario.
-	topOut, topErr := exec.Command("top", "-l", "1", "-stats", "pid,cpu,power,idlew").Output()
-	if topErr != nil {
-		log.Printf("warning: top sampling failed: %v (report metrics will be zero)", topErr)
-	}
-	topSamples, parseErr := parseTopOutput(string(topOut))
-	if parseErr != nil {
-		log.Printf("warning: parseTopOutput failed: %v", parseErr)
-	}
+	// Stop is idempotent; an explicit call here returns the collected
+	// samples while the deferred Stop above guarantees cleanup on the
+	// error paths above.
+	topSamples := sampler.Stop()
 	if len(topSamples) == 0 {
-		log.Printf("warning: no samples from top; report wakeups/energy will be zero")
+		log.Printf("warning: no PID-filtered top samples collected; wakeups/energy will be zero")
 	}
+
 	var pm powermetricsSample
 	if o.useSudo {
-		pmOut, pmErr := exec.Command("sudo", "powermetrics", "--samplers", "cpu_power,tasks", "-i", "1000", "-n", "1").Output()
+		pmOut, pmErr := exec.Command("sudo", "powermetrics",
+			"--samplers", "cpu_power,tasks", "-i", "1000", "-n", "1").Output()
 		if pmErr != nil {
 			log.Printf("warning: powermetrics failed: %v (P/E-core residency will be zero)", pmErr)
 		}
@@ -128,7 +128,13 @@ func run(o opts) error {
 		}
 	}
 
-	// 6. Build report.
+	// Stop the probe (it is inside the lfk subprocess and was killed when
+	// the PTY closed); read whatever JSONL it wrote to dataDir/energy/.
+	probeAgg, perr := ingestProbe(filepath.Join(dataDir, "energy"))
+	if perr != nil {
+		log.Printf("warning: probe JSONL ingest failed: %v", perr)
+	}
+
 	r := buildReport(reportInputs{
 		Scenario:    o.scenario,
 		Fixture:     o.fixture,
@@ -137,14 +143,13 @@ func run(o opts) error {
 		Reps:        o.repetitions,
 		Top:         topSamples,
 		Power:       pm,
+		Probe:       probeAgg,
 	})
 
-	// 7. Compare to baseline.
 	baseDir := "testdata/baselines"
 	basePath := filepath.Join(baseDir, o.scenario+".json")
 	baseline, _ := readBaseline(basePath)
 
-	// 8. Write outputs.
 	stamp := time.Now().Format("20060102-150405")
 	runDir := filepath.Join(o.outDir, fmt.Sprintf("%s-%s", o.scenario, stamp))
 	if err := os.MkdirAll(runDir, 0o755); err != nil {

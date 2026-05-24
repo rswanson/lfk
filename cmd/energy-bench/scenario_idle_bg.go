@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -19,6 +20,9 @@ func unfocusTerminal(parent context.Context, terminalApp string) error {
 	if runtime.GOOS != "darwin" {
 		return nil // best-effort on non-macOS
 	}
+	if os.Getenv("LFK_TEST_DISABLE_UNFOCUS") == "1" {
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
 	defer cancel()
 	return exec.CommandContext(ctx, "osascript", osascriptUnfocusArgs(terminalApp)...).Run()
@@ -34,6 +38,10 @@ func runIdleBackground(parent context.Context, cfg scenarioConfig, terminalApp s
 		return err
 	}
 	defer sess.Close()
+
+	if cfg.onProcessStart != nil {
+		cfg.onProcessStart(sess.PID())
+	}
 
 	// Give the target ~1s to start drawing before we unfocus.
 	time.Sleep(time.Second)
