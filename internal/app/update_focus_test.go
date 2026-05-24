@@ -54,7 +54,7 @@ func TestUpdate_FocusMsgStillEmitsCmdWhenWatchModeOff(t *testing.T) {
 }
 
 func TestModel_ActiveWatchInterval_FocusedReturnsConfigured(t *testing.T) {
-	m := Model{watchInterval: 3 * time.Second, focused: true}
+	m := Model{watchInterval: 3 * time.Second, focused: true, lastInputAt: time.Now()}
 	if got := m.activeWatchInterval(); got != 3*time.Second {
 		t.Errorf("focused: got %v, want 3s", got)
 	}
@@ -112,5 +112,122 @@ func TestSuppressBgtasksFlagDoesNotLeakAfterFocusMsg(t *testing.T) {
 	}
 	if updated.suppressBgtasks {
 		t.Error("suppressBgtasks leaked: still true on the model returned from FocusMsg")
+	}
+}
+
+func TestModel_ForegroundIdle_FalseRightAfterConstruction(t *testing.T) {
+	m := Model{lastInputAt: time.Now()}
+	if m.foregroundIdle() {
+		t.Error("foregroundIdle returned true immediately after construction")
+	}
+}
+
+func TestModel_ForegroundIdle_TrueAfterThreshold(t *testing.T) {
+	m := Model{lastInputAt: time.Now().Add(-2 * foregroundIdleThreshold)}
+	if !m.foregroundIdle() {
+		t.Errorf("foregroundIdle returned false after %v of inactivity", 2*foregroundIdleThreshold)
+	}
+}
+
+func TestModel_ForegroundIdleThresholdIs120s(t *testing.T) {
+	if foregroundIdleThreshold != 120*time.Second {
+		t.Errorf("foregroundIdleThreshold = %v, want 120s (spec)", foregroundIdleThreshold)
+	}
+}
+
+func TestModel_ActiveWatchInterval_IdleAndFocusedReturnsBlurred(t *testing.T) {
+	m := Model{
+		watchInterval: 2 * time.Second,
+		focused:       true,
+		lastInputAt:   time.Now().Add(-2 * foregroundIdleThreshold),
+	}
+	if got := m.activeWatchInterval(); got != blurredWatchInterval {
+		t.Errorf("idle+focused: got %v, want %v", got, blurredWatchInterval)
+	}
+}
+
+func TestModel_ActiveWatchInterval_FocusedAndRecentReturnsConfigured(t *testing.T) {
+	m := Model{
+		watchInterval: 2 * time.Second,
+		focused:       true,
+		lastInputAt:   time.Now(),
+	}
+	if got := m.activeWatchInterval(); got != m.watchInterval {
+		t.Errorf("focused+recent: got %v, want %v", got, m.watchInterval)
+	}
+}
+
+func TestModel_SnapBackIfIdle_NilWhenNotIdle(t *testing.T) {
+	m := Model{focused: true, lastInputAt: time.Now()}
+	if cmd := m.snapBackIfIdle(); cmd != nil {
+		t.Errorf("snapBackIfIdle = %v, want nil when not idle", cmd)
+	}
+}
+
+func TestModel_SnapBackIfIdle_NilWhenBlurred(t *testing.T) {
+	// PR-4 owns the blurred path; this helper should defer to it.
+	m := Model{
+		focused:     false,
+		lastInputAt: time.Now().Add(-2 * foregroundIdleThreshold),
+	}
+	if cmd := m.snapBackIfIdle(); cmd != nil {
+		t.Errorf("snapBackIfIdle = %v, want nil when blurred", cmd)
+	}
+}
+
+func TestModel_SnapBackIfIdle_NonNilWhenFocusedAndIdle(t *testing.T) {
+	m := Model{
+		focused:     true,
+		lastInputAt: time.Now().Add(-2 * foregroundIdleThreshold),
+	}
+	if cmd := m.snapBackIfIdle(); cmd == nil {
+		t.Error("snapBackIfIdle = nil, want non-nil when foreground-idle")
+	}
+}
+
+func TestUpdate_KeyMsgUpdatesLastInputAt(t *testing.T) {
+	stale := time.Now().Add(-2 * foregroundIdleThreshold)
+	m := Model{focused: true, watchInterval: 2 * time.Second, lastInputAt: stale}
+	out, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	mod, ok := out.(Model)
+	if !ok {
+		t.Fatalf("Update returned %T, want Model", out)
+	}
+	if !mod.lastInputAt.After(stale) {
+		t.Errorf("lastInputAt = %v, want > %v", mod.lastInputAt, stale)
+	}
+}
+
+func TestUpdate_KeyMsgAfterIdleEmitsSnapBackCmd(t *testing.T) {
+	m := Model{
+		focused:       true,
+		watchMode:     true,
+		watchInterval: 2 * time.Second,
+		lastInputAt:   time.Now().Add(-2 * foregroundIdleThreshold),
+	}
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	if cmd == nil {
+		t.Fatal("KeyMsg after idle: cmd was nil; expected snap-back batched with handler cmd")
+	}
+	// We don't introspect cmd internals -- coverage is via integration
+	// with refreshCurrentLevel + scheduleWatchTick which have their own tests.
+}
+
+func TestUpdate_FocusMsgUpdatesLastInputAt(t *testing.T) {
+	// Regression guard: FocusMsg must set lastInputAt so a user who
+	// returns to a window they left idle for >120s isn't immediately
+	// re-marked as idle.
+	stale := time.Now().Add(-2 * foregroundIdleThreshold)
+	m := Model{focused: false, watchInterval: 2 * time.Second, lastInputAt: stale}
+	out, _ := m.Update(tea.FocusMsg{})
+	mod, ok := out.(Model)
+	if !ok {
+		t.Fatalf("Update returned %T, want Model", out)
+	}
+	if !mod.lastInputAt.After(stale) {
+		t.Errorf("lastInputAt after FocusMsg = %v, want > %v", mod.lastInputAt, stale)
+	}
+	if mod.foregroundIdle() {
+		t.Error("foregroundIdle = true right after FocusMsg; should be false")
 	}
 }

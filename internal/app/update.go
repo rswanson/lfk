@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -36,9 +37,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.updateWindowSize(msg)
 	case tea.MouseMsg:
-		return m.handleMouse(msg)
+		snapBack := m.snapBackIfIdle()
+		m.lastInputAt = time.Now()
+		out, cmd := m.handleMouse(msg)
+		return out, tea.Batch(snapBack, cmd)
 	case tea.KeyMsg:
-		return m.handleKey(msg)
+		snapBack := m.snapBackIfIdle()
+		m.lastInputAt = time.Now()
+		out, cmd := m.handleKey(msg)
+		return out, tea.Batch(snapBack, cmd)
 	case tea.BlurMsg:
 		return m.updateBlur(msg)
 	case tea.FocusMsg:
