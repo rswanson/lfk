@@ -85,6 +85,39 @@ func TestModel_DefaultBlurredWatchIntervalIs30s(t *testing.T) {
 	}
 }
 
+func TestModel_PollInterval(t *testing.T) {
+	tests := []struct {
+		name    string
+		focused bool
+		nominal time.Duration
+		want    time.Duration
+	}{
+		{"focused keeps fast 50ms poll", true, 50 * time.Millisecond, 50 * time.Millisecond},
+		{"focused keeps fast 100ms poll", true, 100 * time.Millisecond, 100 * time.Millisecond},
+		{"blurred floors 50ms up to 500ms", false, 50 * time.Millisecond, blurredPollFloor},
+		{"blurred floors 100ms up to 500ms", false, 100 * time.Millisecond, blurredPollFloor},
+		{"blurred leaves an already-slow poll alone", false, 2 * time.Second, 2 * time.Second},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := Model{focused: tc.focused}
+			if got := m.pollInterval(tc.nominal); got != tc.want {
+				t.Errorf("pollInterval(%v) focused=%v = %v, want %v", tc.nominal, tc.focused, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestModel_PollInterval_IgnoresForegroundIdle(t *testing.T) {
+	// A focused window with scrolling output is being watched even without
+	// keypresses, so foreground-idle must NOT throttle the local pollers
+	// (unlike the network watch tick).
+	m := Model{focused: true, lastInputAt: time.Now().Add(-2 * foregroundIdleThreshold)}
+	if got := m.pollInterval(50 * time.Millisecond); got != 50*time.Millisecond {
+		t.Errorf("idle+focused pollInterval = %v, want 50ms (idle must not throttle pollers)", got)
+	}
+}
+
 func TestUpdate_BlurThenFocusReturnsToForegroundInterval(t *testing.T) {
 	// Sequence flow: focused start, BlurMsg flips to blurred interval,
 	// FocusMsg snaps back to the configured foreground interval.

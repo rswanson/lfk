@@ -20,8 +20,11 @@ import (
 )
 
 // scheduleStatusClear returns a command that sends a clear message after a delay.
+// The energy label is "status-clear-5s" because this arms the status-bar
+// message expiry, not a data refresh — the older "main-refresh-5s" label
+// misattributed every status-clear to a phantom refresh ticker.
 func scheduleStatusClear() tea.Cmd {
-	return energy.Tick("main-refresh-5s", 5*time.Second, func(_ time.Time) tea.Msg {
+	return energy.Tick("status-clear-5s", 5*time.Second, func(_ time.Time) tea.Msg {
 		return statusMessageExpiredMsg{}
 	})
 }
@@ -98,6 +101,27 @@ func (m Model) activeWatchInterval() time.Duration {
 		return m.blurredWatchInterval
 	}
 	return m.watchInterval
+}
+
+// blurredPollFloor is the slowest cadence the local output pollers (PTY
+// refresh, exec-log refresh, live capture) drop to while the window is
+// unfocused. Unlike the watch tick, these render local output the user may
+// still be glancing at, so they back off only to a glanceable 500ms rather
+// than the multi-second blurred watch interval — cutting their 20/s and
+// 10/s wakeup rates by 5-10x without making a running terminal look frozen.
+const blurredPollFloor = 500 * time.Millisecond
+
+// pollInterval returns the cadence a local output poller should use given
+// its nominal (focused) interval. Focused windows poll at the nominal
+// rate; blurred windows slow to at least blurredPollFloor. It keys off
+// m.focused only, not foregroundIdle: a focused window with scrolling
+// output is being watched even without keypresses, so idleness must not
+// throttle these the way it throttles the network watch tick.
+func (m Model) pollInterval(nominal time.Duration) time.Duration {
+	if m.focused || nominal >= blurredPollFloor {
+		return nominal
+	}
+	return blurredPollFloor
 }
 
 // foregroundIdle reports whether the user has been inactive

@@ -18,7 +18,7 @@ func (m Model) updateExecPTYTick(msg execPTYTickMsg) (tea.Model, tea.Cmd) {
 		for i := range m.tabs {
 			if i != m.activeTab && m.tabs[i].execPTY == msg.ptmx && m.tabs[i].execPTY != nil {
 				ptmx := msg.ptmx
-				return m, energy.Tick("exec-log-50ms", 50*time.Millisecond, func(t time.Time) tea.Msg {
+				return m, energy.Tick("exec-log-50ms", m.pollInterval(50*time.Millisecond), func(t time.Time) tea.Msg {
 					return execPTYTickMsg{ptmx: ptmx}
 				})
 			}

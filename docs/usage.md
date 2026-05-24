@@ -322,6 +322,15 @@ to keep the view fresh, at the cost of more background wakeups:
 Same `[500ms, 10m]` clamp as `watch_interval`; invalid values fall back to
 30s. Set it equal to `watch_interval` to effectively disable blur throttling.
 
+Local output pollers also back off while the window is unfocused: an
+embedded shell (PTY), a streamed exec/log view, and a live traffic capture
+slow their refresh from 20/s (10/s for capture) to 2/s. They snap back to
+full speed the moment the window regains focus. This is fixed at 500ms and
+not configurable — it keeps a glanced-at terminal readable while cutting
+background wakeups by 5-10x. Unlike the watch tick, it is *not* triggered by
+foreground-idle, since output may be scrolling while you watch without
+typing.
+
 ## Discovery Cache
 
 API discovery (the list of resource types and CRDs the server exposes) is
