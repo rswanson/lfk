@@ -369,7 +369,7 @@ func (m Model) handleKeyWatchMode() (tea.Model, tea.Cmd) {
 	m.watchMode = !m.watchMode
 	if m.watchMode {
 		m.setStatusMessage(fmt.Sprintf("Watch mode ON (refresh every %s)", m.watchInterval), false)
-		return m, tea.Batch(scheduleWatchTick(m.watchInterval), scheduleStatusClear())
+		return m, tea.Batch(scheduleWatchTick(m.activeWatchInterval()), scheduleStatusClear())
 	}
 	m.setStatusMessage("Watch mode OFF", false)
 	return m, scheduleStatusClear()

@@ -215,7 +215,7 @@ func runTUI(opts app.StartupOptions) error {
 	m := app.NewModel(client, opts)
 	m.SetVersion(version.Short())
 	m.SetStderrChan(stderrCapture.MsgChan)
-	progOpts := []tea.ProgramOption{tea.WithAltScreen()}
+	progOpts := []tea.ProgramOption{tea.WithAltScreen(), tea.WithReportFocus()}
 	if !opts.NoMouse && ui.ConfigMouse {
 		progOpts = append(progOpts, tea.WithMouseCellMotion())
 	}

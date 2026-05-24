@@ -135,7 +135,7 @@ func (m Model) updateWatchTick(msg watchTickMsg) (tea.Model, tea.Cmd) {
 	// flag or its loaders would also call StartUntracked and the
 	// indicator would never appear for user actions.
 	m.suppressBgtasks = true
-	cmd := tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.watchInterval))
+	cmd := tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.activeWatchInterval()))
 	m.suppressBgtasks = false
 	return m, cmd
 }

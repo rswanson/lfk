@@ -24,7 +24,7 @@ func (m Model) Init() tea.Cmd {
 	// log overlay instead of only the on-disk file.
 	cmds = append(cmds, waitForLoggerUI())
 	if m.watchMode {
-		cmds = append(cmds, scheduleWatchTick(m.watchInterval))
+		cmds = append(cmds, scheduleWatchTick(m.activeWatchInterval()))
 	}
 	if ui.ConfigTipsEnabled {
 		cmds = append(cmds, scheduleStartupTip())
