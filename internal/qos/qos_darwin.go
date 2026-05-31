@@ -8,6 +8,11 @@ package qos
 */
 import "C"
 
+// qosSupported is true on darwin+cgo: setQoS makes a real
+// pthread_set_qos_class_self_np call, so RunWith pins the goroutine's OS
+// thread to carry the QoS class.
+const qosSupported = true
+
 func setQoS(class QoSClass) {
 	// The second arg is "relative priority within class"; 0 is the
 	// only value Apple's docs really define. Higher relative priorities

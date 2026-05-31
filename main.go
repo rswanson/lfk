@@ -9,8 +9,6 @@ import (
 	"net/http"
 	_ "net/http/pprof" // registers /debug/pprof/* under DefaultServeMux when LFK_PPROF_ADDR is set
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -23,7 +21,6 @@ import (
 	"github.com/janosmiko/lfk/internal/completion"
 	"github.com/janosmiko/lfk/internal/k8s"
 	"github.com/janosmiko/lfk/internal/logger"
-	"github.com/janosmiko/lfk/internal/perf/energy"
 	"github.com/janosmiko/lfk/internal/ui"
 	"github.com/janosmiko/lfk/internal/version"
 )
@@ -175,29 +172,6 @@ func runTUI(opts app.StartupOptions) error {
 			srv := &http.Server{Addr: addr} //nolint:gosec // validated loopback-only above
 			if err := srv.ListenAndServe(); err != nil {
 				logger.Warn("pprof server stopped", "error", err)
-			}
-		}()
-	}
-
-	// Optional in-process energy probe. Set LFK_ENERGY_PROBE=1 to enable.
-	// Writes JSONL samples under the lfk data dir on shutdown or on SIGUSR1.
-	// Off by default; zero overhead when off.
-	probe, err := energy.Start()
-	if err != nil {
-		return fmt.Errorf("energy probe: %w", err)
-	}
-	energy.SetGlobal(probe)
-	defer func() { _ = probe.Stop() }()
-
-	if probe.Enabled() {
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGUSR1)
-		defer signal.Stop(sigCh)
-		go func() {
-			for range sigCh {
-				if err := probe.FlushOnSignal(); err != nil {
-					logger.Warn("energy probe: flush", "error", err)
-				}
 			}
 		}()
 	}

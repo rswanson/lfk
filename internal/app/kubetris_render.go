@@ -7,7 +7,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/janosmiko/lfk/internal/perf/energy"
 	"github.com/janosmiko/lfk/internal/ui"
 )
 
@@ -46,14 +45,14 @@ func kubetrisPieceColor(idx int) string {
 // after the interval determined by the current level.
 // scheduleKubetrisAnimTick returns a fast tick for animation (100ms).
 func scheduleKubetrisAnimTick() tea.Cmd {
-	return energy.Tick("kubetris-render-100ms", 100*time.Millisecond, func(_ time.Time) tea.Msg {
+	return tea.Tick(100*time.Millisecond, func(_ time.Time) tea.Msg {
 		return kubetrisAnimTickMsg{}
 	})
 }
 
 // scheduleKubetrisLockDelay schedules the lock after 500ms.
 func scheduleKubetrisLockDelay() tea.Cmd {
-	return energy.Tick("kubetris-spawn-500ms", 500*time.Millisecond, func(_ time.Time) tea.Msg {
+	return tea.Tick(500*time.Millisecond, func(_ time.Time) tea.Msg {
 		return kubetrisLockTickMsg{}
 	})
 }
@@ -63,7 +62,7 @@ func (m Model) scheduleKubetrisTick() tea.Cmd {
 		return nil
 	}
 	ms := m.kubetrisGame.tickIntervalMs()
-	return energy.Tick("kubetris-gravity-variable", time.Duration(ms)*time.Millisecond, func(_ time.Time) tea.Msg {
+	return tea.Tick(time.Duration(ms)*time.Millisecond, func(_ time.Time) tea.Msg {
 		return kubetrisTickMsg{}
 	})
 }

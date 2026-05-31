@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/janosmiko/lfk/internal/perf/energy"
 	"github.com/janosmiko/lfk/internal/ui"
 )
 
@@ -54,7 +53,7 @@ func (m Model) clearKonami() Model {
 // scheduleKonamiClear returns a command that fires after 5 seconds
 // to clear the Konami Code activation status.
 func scheduleKonamiClear() tea.Cmd {
-	return energy.Tick("easter-cursor-5s", 5*time.Second, func(_ time.Time) tea.Msg {
+	return tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
 		return konamiClearMsg{}
 	})
 }
@@ -79,7 +78,7 @@ func (m Model) toggleNyan() (Model, tea.Cmd) {
 
 // scheduleNyanTick returns a command that fires a nyanTickMsg every 150ms.
 func scheduleNyanTick() tea.Cmd {
-	return energy.Tick("easter-spinner-150ms", 150*time.Millisecond, func(_ time.Time) tea.Msg {
+	return tea.Tick(150*time.Millisecond, func(_ time.Time) tea.Msg {
 		return nyanTickMsg{}
 	})
 }
@@ -163,7 +162,7 @@ func creditsLines(version string) []string {
 // scheduleCreditsScroll returns a command that fires a creditsTickMsg
 // after 250ms for scrolling animation.
 func scheduleCreditsScroll() tea.Cmd {
-	return energy.Tick("easter-flash-250ms", 250*time.Millisecond, func(_ time.Time) tea.Msg {
+	return tea.Tick(250*time.Millisecond, func(_ time.Time) tea.Msg {
 		return creditsTickMsg{}
 	})
 }
@@ -185,7 +184,7 @@ func (m Model) tickCredits() (Model, bool) {
 
 // scheduleCreditsClose returns a command that fires a creditsCloseMsg after 10 seconds.
 func scheduleCreditsClose() tea.Cmd {
-	return energy.Tick("easter-cooldown-10s", 10*time.Second, func(_ time.Time) tea.Msg {
+	return tea.Tick(10*time.Second, func(_ time.Time) tea.Msg {
 		return creditsCloseMsg{}
 	})
 }
