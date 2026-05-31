@@ -110,20 +110,3 @@ generate-themes: ## Download ghostty themes and regenerate colorschemes_gen.go
 	@echo "Generating colorschemes..."
 	go run ./cmd/themegen --input-dir=$(GHOSTTY_THEMES_DIR) --output=internal/ui/colorschemes_gen.go
 	@echo "Done. Run 'go test ./internal/ui/' to verify."
-
-.PHONY: energy-bench energy-bench-all energy-bench-update-baseline
-
-LFK_BIN ?= ./lfk
-
-energy-bench: build ## Run the energy harness for one scenario (override SCENARIO=idle-foreground|idle-background|active-scripted)
-	@SCENARIO=$${SCENARIO:-idle-foreground}; \
-	  go run ./cmd/energy-bench -binary $(LFK_BIN) -scenario $$SCENARIO -fixture medium -contexts 3 -duration 90 -reps 1
-
-energy-bench-all: build ## Run all three scenarios sequentially
-	@for s in idle-foreground idle-background active-scripted; do \
-	  go run ./cmd/energy-bench -binary $(LFK_BIN) -scenario $$s -fixture medium -contexts 3 -duration 90 -reps 1 || exit 1; \
-	done
-
-energy-bench-update-baseline: build ## Capture current run as the baseline for SCENARIO
-	@SCENARIO=$${SCENARIO:-idle-foreground}; \
-	  go run ./cmd/energy-bench -binary $(LFK_BIN) -scenario $$SCENARIO -fixture medium -contexts 3 -duration 90 -reps 1 -update-baseline

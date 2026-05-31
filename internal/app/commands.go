@@ -15,16 +15,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/janosmiko/lfk/internal/logger"
 	"github.com/janosmiko/lfk/internal/model"
-	"github.com/janosmiko/lfk/internal/perf/energy"
 	"github.com/janosmiko/lfk/internal/ui"
 )
 
 // scheduleStatusClear returns a command that sends a clear message after a delay.
-// The energy label is "status-clear-5s" because this arms the status-bar
-// message expiry, not a data refresh — the older "main-refresh-5s" label
-// misattributed every status-clear to a phantom refresh ticker.
 func scheduleStatusClear() tea.Cmd {
-	return energy.Tick("status-clear-5s", 5*time.Second, func(_ time.Time) tea.Msg {
+	return tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
 		return statusMessageExpiredMsg{}
 	})
 }
@@ -81,7 +77,7 @@ var startupTips = []string{
 // scheduleStartupTip sends a random tip after a short delay to let the UI settle.
 func scheduleStartupTip() tea.Cmd {
 	tip := startupTips[rand.IntN(len(startupTips))]
-	return energy.Tick("main-status-500ms", 500*time.Millisecond, func(_ time.Time) tea.Msg {
+	return tea.Tick(500*time.Millisecond, func(_ time.Time) tea.Msg {
 		return startupTipMsg{tip: tip}
 	})
 }
@@ -163,7 +159,7 @@ func (m *Model) nextWatchTick(interval time.Duration) tea.Cmd {
 // with gen after the interval. Callers pass the generation the resulting
 // chain belongs to so updateWatchTick can drop superseded chains.
 func scheduleWatchTick(gen uint64, interval time.Duration) tea.Cmd {
-	return energy.Tick("main-context-interval", interval, func(_ time.Time) tea.Msg {
+	return tea.Tick(interval, func(_ time.Time) tea.Msg {
 		return watchTickMsg{gen: gen}
 	})
 }
@@ -171,14 +167,14 @@ func scheduleWatchTick(gen uint64, interval time.Duration) tea.Cmd {
 const previewDebounceDelay = 300 * time.Millisecond
 
 func schedulePreviewDebounce(gen uint64) tea.Cmd {
-	return energy.Tick("preview-debounce", previewDebounceDelay, func(_ time.Time) tea.Msg {
+	return tea.Tick(previewDebounceDelay, func(_ time.Time) tea.Msg {
 		return previewDebounceTickMsg{gen: gen}
 	})
 }
 
 // scheduleDescribeRefresh returns a command that sends a describeRefreshTickMsg after 2 seconds.
 func scheduleDescribeRefresh() tea.Cmd {
-	return energy.Tick("alerts-2s", 2*time.Second, func(_ time.Time) tea.Msg {
+	return tea.Tick(2*time.Second, func(_ time.Time) tea.Msg {
 		return describeRefreshTickMsg{}
 	})
 }
