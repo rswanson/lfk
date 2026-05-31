@@ -181,16 +181,12 @@ type Model struct {
 	// Watch mode: auto-refresh the current view on a timer.
 	watchMode     bool
 	watchInterval time.Duration
-	// blurredWatchInterval is the cadence activeWatchInterval() returns while
-	// blurred or foreground-idle. Resolved in NewModel from config/CLI;
-	// defaults to ui.DefaultBlurredWatchInterval.
+	// blurredWatchInterval is the cadence activeWatchInterval() returns while blurred or foreground-idle; resolved in NewModel from config/CLI (default ui.DefaultBlurredWatchInterval).
 	blurredWatchInterval time.Duration
 	// focused is set/cleared by tea.FocusMsg/tea.BlurMsg; drives activeWatchInterval().
 	focused bool
-	// lastInputAt is the timestamp of the most recent KeyMsg or MouseMsg. Used
-	// by activeWatchInterval() to detect foreground-idle (no input for
-	// foregroundIdleThreshold). Initialised in NewModel so a freshly
-	// constructed Model is never idle.
+	// lastInputAt is the most recent KeyMsg/MouseMsg time; activeWatchInterval()
+	// uses it to detect foreground-idle. Initialised in NewModel (never idle at start).
 	lastInputAt time.Time
 	// Read-only mode: blocks all mutating actions for the active tab. Mirrors
 	// the active TabState.readOnly; re-evaluated on context switch and tab
