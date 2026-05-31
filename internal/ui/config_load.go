@@ -33,6 +33,11 @@ type configFile struct {
 	// ResourceColumns maps resource Kind names (case-insensitive, e.g. "Pod", "Deployment")
 	// to per-type column lists. When set, these override the global Columns setting for that kind.
 	ResourceColumns map[string][]string `json:"resource_columns" yaml:"resource_columns"`
+	// Views maps GVR ("apps/v1/deployments") or Kind ("deployment", case-insensitive)
+	// to a view config — ordered columns and a default sort column. Subsumes
+	// ResourceColumns (which remains supported for backward compat). See the
+	// ColumnSpec parser for the per-entry format.
+	Views map[string]configView `json:"views" yaml:"views"`
 	// Dashboard controls whether to show a cluster dashboard when entering a context.
 	// Defaults to true. Set to false to go directly to resource types.
 	Dashboard *bool `json:"dashboard" yaml:"dashboard"`
@@ -56,6 +61,10 @@ type configFile struct {
 	// PinnedGroups lists CRD API groups that should appear prominently
 	// right after built-in categories. Example: ["karpenter.sh", "monitoring.coreos.com"]
 	PinnedGroups []string `json:"pinned_groups" yaml:"pinned_groups"`
+	// PinnedTypes lists version-agnostic resource-type pin keys
+	// ("group/resource", e.g. "apps/deployments" or "argoproj.io/applications")
+	// to move into the top-level Pinned section.
+	PinnedTypes []string `json:"pinned_types" yaml:"pinned_types"`
 	// Monitoring maps cluster context names to custom monitoring endpoint config.
 	// The special key "_global" applies to clusters without explicit config.
 	Monitoring map[string]model.MonitoringConfig `json:"monitoring" yaml:"monitoring"`
@@ -138,6 +147,11 @@ type configFile struct {
 	// overrides under clusters.<name>.read_only take precedence; the
 	// --read-only CLI flag wins over both.
 	ReadOnly *bool `json:"read_only" yaml:"read_only"`
+	// Security configures the built-in security-findings dashboard. When
+	// disabled the Security sidebar category, the SEC badge, and all source
+	// probing are turned off. Per-context overrides under
+	// clusters.<name>.security take precedence over this global setting.
+	Security *securityConfig `json:"security" yaml:"security"`
 	// RightsizingDefaults configures the initial strategy + headroom that
 	// the right-sizing advisor uses on its first overlay open of the
 	// session. Once the user changes strategy or headroom in the overlay,
@@ -307,11 +321,30 @@ func (c *UnionSetContextConfig) UnmarshalJSON(data []byte) error {
 
 // clusterConfig holds per-cluster configuration overrides.
 type clusterConfig struct {
-	ResourceColumns map[string][]string `json:"resource_columns" yaml:"resource_columns"`
+	ResourceColumns map[string][]string   `json:"resource_columns" yaml:"resource_columns"`
+	Views           map[string]configView `json:"views" yaml:"views"`
 	// ReadOnly, when set, overrides the global read_only setting for this
 	// context only. Useful for marking specific clusters (e.g. "prod") as
 	// read-only while leaving others mutable.
 	ReadOnly *bool `json:"read_only" yaml:"read_only"`
+	// Security, when set, overrides the global security settings for this
+	// context only — e.g. disabling the dashboard on a cluster where the
+	// kubeconfig credential plugin is noisy, or enabling only specific
+	// sources per cluster.
+	Security *securityConfig `json:"security" yaml:"security"`
+}
+
+// securityConfig is the on-disk schema for the global `security` section and
+// the per-cluster `clusters.<name>.security` override.
+type securityConfig struct {
+	// Enabled turns the whole security dashboard on or off. Defaults to true
+	// (omitted = enabled).
+	Enabled *bool `json:"enabled" yaml:"enabled"`
+	// Sources enables or disables individual sources by name. Keys accept the
+	// friendly names (heuristic, trivy, kyverno, kubescape, falco, gatekeeper)
+	// or the internal source ids (trivy-operator, policy-report). Any source
+	// omitted from the map defaults to enabled.
+	Sources map[string]bool `json:"sources" yaml:"sources"`
 }
 
 // RightsizingDefaultsConfig is the on-disk schema for the

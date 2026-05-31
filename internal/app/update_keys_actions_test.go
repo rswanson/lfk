@@ -29,6 +29,19 @@ func TestActionKeyATogglesAllNamespaces(t *testing.T) {
 	assert.False(t, result.allNamespaces)
 }
 
+func TestActionKeyAllNamespacesNoOpAtClusters(t *testing.T) {
+	m := baseExplorerModel()
+	m.nav.Level = model.LevelClusters
+	m.allNamespaces = false
+
+	ret, cmd, handled := m.handleExplorerActionKey(runeKey('A'))
+	assert.True(t, handled)
+	result := ret.(Model)
+	assert.False(t, result.allNamespaces, "all-namespaces must not toggle without a selected context")
+	assert.NotEmpty(t, result.statusMessage)
+	assert.NotNil(t, cmd)
+}
+
 // --- handleExplorerActionKey: ctrl+d half page down ---
 
 func TestActionKeyCtrlDHalfPageDown(t *testing.T) {
@@ -371,6 +384,19 @@ func TestActionKeyAOpensTemplates(t *testing.T) {
 	assert.True(t, handled)
 	result := ret.(Model)
 	assert.Equal(t, overlayTemplates, result.overlay)
+}
+
+func TestActionKeyANoOpAtClusters(t *testing.T) {
+	m := baseExplorerModel()
+	m.nav.Level = model.LevelClusters
+
+	ret, cmd, handled := m.handleExplorerActionKey(runeKey('a'))
+	assert.True(t, handled)
+	result := ret.(Model)
+	assert.Equal(t, overlayNone, result.overlay,
+		"template overlay must not open without a selected context")
+	assert.NotEmpty(t, result.statusMessage)
+	assert.NotNil(t, cmd)
 }
 
 func TestActionKeyATemplateMatchesCurrentKind(t *testing.T) {
@@ -1082,4 +1108,21 @@ func TestYKeyBulkCapExceeded(t *testing.T) {
 	r := mdl.(Model)
 	assert.False(t, r.copyFormatPicker.active, "picker must NOT open when cap is exceeded")
 	assert.Contains(t, r.statusMessage, "Max 50 exceeded")
+}
+
+// TestLoadDiffSecurityNoFetch guards against the Diff key dispatching a
+// kubectl-shaped GetResourceYAML for a synthetic security ResourceTypeEntry —
+// the cmd must short-circuit with a clear error instead of producing a kubectl
+// failure tagged with "fetching <name>".
+func TestLoadDiffSecurityNoFetch(t *testing.T) {
+	m := basePush80Model()
+	rt := model.ResourceTypeEntry{Kind: "__security_falco__", APIGroup: "_security"}
+	itemA := model.Item{Name: "pod/a", Kind: "__security_affected_resource__", Namespace: "default"}
+	itemB := model.Item{Name: "pod/b", Kind: "__security_affected_resource__", Namespace: "default"}
+	cmd := m.loadDiff(rt, itemA, itemB)
+	require.NotNil(t, cmd)
+	msg, ok := cmd().(diffLoadedMsg)
+	require.True(t, ok)
+	require.Error(t, msg.err)
+	assert.Contains(t, msg.err.Error(), "__security_falco__", "error must identify the synthetic kind")
 }

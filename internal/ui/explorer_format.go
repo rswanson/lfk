@@ -82,8 +82,6 @@ func styledExtraCell(ec extraColumn, item *model.Item) string {
 	}
 }
 
-// plainBuiltinCell builds the plain-text cell for a single built-in column.
-// Values are the already-resolved display strings for this row (e.g. ns with
 // statusAbbreviations maps long-form Pod-ish status strings to a compact
 // label used when the STATUS column has been shrunk under width pressure.
 // Entries here are status values that are otherwise too verbose for narrow
@@ -119,53 +117,6 @@ func AbbreviateStatusForWidth(status string, w int) string {
 	return status
 }
 
-// dash fallback, preprocessed restarts with arrow prefix).
-func plainBuiltinCell(key string, ns, ready, restarts, status, age string,
-	nsW, readyW, restartsW, statusW, ageW int,
-) string {
-	switch key {
-	case "Namespace":
-		return padRight(Truncate(ns, nsW-1), nsW)
-	case "Ready":
-		return padRight(ready, readyW)
-	case "Restarts":
-		return padRight(restarts, restartsW)
-	case "Status":
-		return padRight(Truncate(AbbreviateStatusForWidth(status, statusW-1), statusW-1), statusW)
-	case "Age":
-		return padRight(age, ageW)
-	}
-	return ""
-}
-
-// styledBuiltinCell builds the styled cell for a single built-in column.
-// Namespaces are dimmed, Ready is dimmed, Restarts is delegated to
-// styledRestartsCell for its arrow handling, Status and Age use their own
-// status-aware style helpers.
-func styledBuiltinCell(key string, item model.Item,
-	nsW, readyW, restartsW, statusW, ageW int, anyRecentRestart bool,
-) string {
-	switch key {
-	case "Namespace":
-		ns := item.Namespace
-		if ns == "" {
-			ns = "-"
-		}
-		return DimStyle.Render(padRight(Truncate(ns, nsW-1), nsW))
-	case "Ready":
-		return DimStyle.Render(padRight(item.Ready, readyW))
-	case "Restarts":
-		return styledRestartsCell(item, restartsW, anyRecentRestart)
-	case "Status":
-		val := AbbreviateStatusForWidth(item.Status, statusW-1)
-		return StatusStyle(val).Render(padRight(Truncate(val, statusW-1), statusW))
-	case "Age":
-		age := LiveAge(item)
-		return AgeStyle(age).Render(padRight(age, ageW))
-	}
-	return ""
-}
-
 // styledRestartsCell renders the restarts column with recent-restart arrow
 // styling. Rows whose LastRestartAt is within the past hour are tagged with
 // an up-arrow; when any row in the table has a recent restart, rows without
@@ -196,23 +147,15 @@ func formatTableRowOrdered(name, ns, ready, restarts, status, age string,
 	nameW, contextW, nsW, readyW, restartsW, statusW, ageW int,
 	order []string, extraCols []extraColumn, item *model.Item,
 ) string {
+	widths := builtinColWidths{context: contextW, ns: nsW, ready: readyW, restarts: restartsW, status: statusW, age: ageW}
+	inputs := plainCellInputs{item: item, ns: ns, ready: ready, restarts: restarts, status: status, age: age, widths: widths}
 	var row strings.Builder
-	row.WriteString(padRight(Truncate(name, nameW-1), nameW))
+	row.WriteString(plainNameCellWithBadge(name, item, nameW))
 	for _, key := range order {
-		if key == "Context" && contextW > 0 {
-			contextName := ""
-			if item != nil {
-				contextName = item.ClusterName
-			}
-			row.WriteString(padRight(Truncate(contextName, contextW-1), contextW))
+		if col := renderableBuiltin(key, widths); col != nil {
+			row.WriteString(col.plain(inputs))
 			continue
 		}
-		if isBuiltinColumnKey(key) {
-			row.WriteString(plainBuiltinCell(key, ns, ready, restarts, status, age,
-				nsW, readyW, restartsW, statusW, ageW))
-			continue
-		}
-		// Extra column: look up metadata and emit via plainExtraCell.
 		for _, ec := range extraCols {
 			if ec.key == key {
 				row.WriteString(plainExtraCell(ec, item))
@@ -230,15 +173,13 @@ func formatTableRowStyledOrdered(item model.Item,
 	nameW, contextW, nsW, readyW, restartsW, statusW, ageW int,
 	order []string, extraCols []extraColumn, anyRecentRestart bool,
 ) string {
+	widths := builtinColWidths{context: contextW, ns: nsW, ready: readyW, restarts: restartsW, status: statusW, age: ageW}
+	inputs := styledCellInputs{item: item, widths: widths, anyRecentRestart: anyRecentRestart}
 	var base strings.Builder
 	base.WriteString(styledNameCell(item, nameW))
 	for _, key := range order {
-		if key == "Context" && contextW > 0 {
-			base.WriteString(DimStyle.Render(padRight(Truncate(item.ClusterName, contextW-1), contextW)))
-			continue
-		}
-		if isBuiltinColumnKey(key) {
-			base.WriteString(styledBuiltinCell(key, item, nsW, readyW, restartsW, statusW, ageW, anyRecentRestart))
+		if col := renderableBuiltin(key, widths); col != nil {
+			base.WriteString(col.styled(inputs))
 			continue
 		}
 		for _, ec := range extraCols {
@@ -251,15 +192,49 @@ func formatTableRowStyledOrdered(item model.Item,
 	return base.String()
 }
 
+// plainNameCellWithBadge renders the name column for the plain-text path,
+// appending the security severity badge inside the budget when one applies.
+// Used for cursor rows where the highlighted background must not collide
+// with ANSI styling embedded in the badge string.
+func plainNameCellWithBadge(name string, item *model.Item, nameW int) string {
+	badge := ""
+	if item != nil {
+		badge = securityBadgePlainForItem(item)
+	}
+	if badge == "" {
+		return padRight(Truncate(name, nameW-1), nameW)
+	}
+	badgeW := lipgloss.Width(badge)
+	reserved := badgeW + 2 // 1 separator + 1 column gap
+	if reserved >= nameW {
+		return padRight(Truncate(name, nameW-1), nameW)
+	}
+	nameMax := nameW - reserved
+	trimmed := Truncate(name, nameMax)
+	content := trimmed + " " + badge
+	return padRight(content, nameW)
+}
+
 // styledNameCell renders the Name column with optional icon and dimmed
 // styling for completed items. Pods in Succeeded or Completed status get
 // their name dimmed; otherwise NormalStyle is used. The active highlight
 // query is applied to the resolved display name.
+//
+// When a security finding index is active and the item has matching findings,
+// the styled severity badge is appended inside the column budget (name is
+// truncated to make room). Gated callers (ActiveSecurityAvailable == false)
+// get an empty badge and the row renders identically to the pre-security UI.
 func styledNameCell(item model.Item, nameW int) string {
 	isDimmed := item.Status == "Succeeded" || item.Status == "Completed"
 	nameStyle := NormalStyle
 	if isDimmed {
 		nameStyle = DimStyle
+	}
+	badge := securityBadgeForItem(&item)
+	badgeW := lipgloss.Width(badge)
+	badgeReserve := 0
+	if badgeW > 0 {
+		badgeReserve = badgeW + 1 // separator space
 	}
 	if resolvedIcon := resolveIcon(item.Icon); resolvedIcon != "" {
 		iconSt := IconStyle
@@ -268,25 +243,50 @@ func styledNameCell(item model.Item, nameW int) string {
 		}
 		icon := iconSt.Render(resolvedIcon) + " "
 		iconVisualW := lipgloss.Width(icon)
-		nameRemaining := max(
-			// -1 reserves gap before next column
-			nameW-iconVisualW-1, 1)
+		// -1 reserves gap before next column.
+		nameRemaining := max(nameW-iconVisualW-1-badgeReserve, 1)
+		// Drop the badge when it would not fit alongside a readable name.
+		activeBadge := badge
+		if badgeReserve > 0 && nameW-iconVisualW-1 <= badgeReserve {
+			activeBadge = ""
+			nameRemaining = max(nameW-iconVisualW-1, 1)
+		}
 		namePart := Truncate(item.Name, nameRemaining)
 		if ActiveHighlightQuery != "" {
 			namePart = highlightName(namePart, ActiveHighlightQuery)
 		}
 		nameVisualW := lipgloss.Width(namePart)
-		pad := max(nameW-iconVisualW-nameVisualW, 0)
+		badgeSegment := ""
+		badgeSegmentW := 0
+		if activeBadge != "" {
+			badgeSegment = " " + activeBadge
+			badgeSegmentW = lipgloss.Width(badgeSegment)
+		}
+		pad := max(nameW-iconVisualW-nameVisualW-badgeSegmentW, 0)
 		if isDimmed {
 			namePart = DimStyle.Render(namePart)
 		}
-		return icon + namePart + strings.Repeat(" ", pad)
+		return icon + namePart + badgeSegment + strings.Repeat(" ", pad)
 	}
-	displayName := Truncate(item.Name, nameW-1)
+	// Drop the badge when it would not fit alongside a readable name.
+	activeBadge := badge
+	if badgeReserve > 0 && nameW <= badgeReserve+1 {
+		activeBadge = ""
+		badgeReserve = 0
+	}
+	nameRemaining := max(nameW-1-badgeReserve, 1)
+	displayName := Truncate(item.Name, nameRemaining)
 	if ActiveHighlightQuery != "" {
 		displayName = highlightName(displayName, ActiveHighlightQuery)
 	}
-	return nameStyle.Render(padRight(displayName, nameW))
+	if activeBadge == "" {
+		return nameStyle.Render(padRight(displayName, nameW))
+	}
+	nameVisualW := lipgloss.Width(displayName)
+	badgeSegment := " " + activeBadge
+	badgeSegmentW := lipgloss.Width(badgeSegment)
+	pad := max(nameW-nameVisualW-badgeSegmentW, 0)
+	return nameStyle.Render(displayName) + badgeSegment + strings.Repeat(" ", pad)
 }
 
 // resourceColumnStyle returns a style for extra columns, colorizing CPU/Mem columns.
@@ -300,6 +300,8 @@ func resourceColumnStyle(key, val string) lipgloss.Style {
 		return pctStyle(val)
 	case "CPU Req", "CPU Lim", "Mem Req", "Mem Lim", "CPU Alloc", "Mem Alloc":
 		return lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSecondary)).Background(BaseBg)
+	case "Severity":
+		return severityColumnStyle(val)
 	case "Last Sync", "Health", "Sync", "Reason":
 		return StatusStyle(val)
 	case "Synced At":
@@ -319,6 +321,24 @@ func resourceColumnStyle(key, val string) lipgloss.Style {
 	default:
 		return DimStyle
 	}
+}
+
+// severityColumnStyle returns the lipgloss.Style that paints the
+// abbreviated severity label in the Severity column. Mirrors the badge
+// palette in styleSeverityBadge so the row, badge, and details panel
+// all use the same color per level.
+func severityColumnStyle(val string) lipgloss.Style {
+	switch val {
+	case "CRIT":
+		return StatusFailed
+	case "HIGH":
+		return DeprecationStyle
+	case "MED":
+		return StatusProgressing
+	case "LOW":
+		return StatusRunning
+	}
+	return DimStyle
 }
 
 // pctStyle returns a colored style based on a percentage string like "42%" or "n/a".

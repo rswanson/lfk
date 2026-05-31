@@ -16,6 +16,11 @@ type stderrCapturedMsg struct {
 	message string
 }
 
+// shutdownCompleteMsg signals that the asynchronous quit drain (worker
+// pools, informer caches, session save) has finished, so the program can
+// dispatch tea.Quit and exit cleanly.
+type shutdownCompleteMsg struct{}
+
 type contextsLoadedMsg struct {
 	items []model.Item
 	err   error
@@ -151,8 +156,8 @@ type containerSelectMsg struct {
 
 // dashboardLoadedMsg carries the rendered dashboard content.
 type dashboardLoadedMsg struct {
-	content string
-	events  string // recent warning events for the right column in two-column mode
+	data    dashboardData // composed into preview/events at the current width on receipt
+	content string        // optional pre-rendered override (e.g. "disabled"); used verbatim when non-empty
 	context string
 }
 
@@ -167,9 +172,14 @@ type dashboardPartialMsg struct {
 	data    dashboardData
 }
 
-// monitoringDashboardMsg carries the rendered monitoring dashboard content.
+// monitoringDashboardMsg carries the rendered monitoring dashboard content
+// plus the raw alert payload it was built from. The raw payload is retained so
+// the dashboard can be re-rendered on a theme change or resize without
+// re-querying Prometheus (see recomposeMonitoring).
 type monitoringDashboardMsg struct {
-	content string
+	content string          // pre-rendered body for immediate display
+	alerts  []k8s.AlertInfo // raw payload retained for theme/resize recompose
+	errMsg  string          // non-empty when the monitoring backend was unreachable
 	context string
 }
 

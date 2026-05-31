@@ -73,6 +73,9 @@ func (m Model) refreshCurrentLevel() tea.Cmd {
 		}
 		return m.loadResources(false)
 	case model.LevelOwned:
+		if m.nav.ResourceType.APIGroup == model.SecurityVirtualAPIGroup {
+			return m.loadSecurityAffectedResources(false)
+		}
 		return m.loadOwned(false)
 	case model.LevelContainers:
 		return m.loadContainers(false)
@@ -132,8 +135,7 @@ func (m Model) closeTabOrQuit() (tea.Model, tea.Cmd) {
 		m.overlay = overlayQuitConfirm
 		return m, nil
 	}
-	m.performQuitCleanup()
-	return m, tea.Quit
+	return m.beginShutdown()
 }
 
 func (m Model) executeActionScale() Model {
@@ -173,7 +175,10 @@ func (m Model) executeActionDefault(actionLabel string) (tea.Model, tea.Cmd) {
 			return m, scheduleStatusClear()
 		}
 		expandedCmd := expandCustomActionTemplate(ca.Command, m.actionCtx)
-		m.addLogEntry("DBG", fmt.Sprintf("$ sh -c %q", expandedCmd))
+		// Log only the action label, not the expanded command — templates
+		// can interpolate user-controlled fields (env, annotations, secret
+		// names) that may contain tokens we should not echo into the log.
+		m.addLogEntry("DBG", fmt.Sprintf("custom action %q dispatched", actionLabel))
 		return m, m.execCustomAction(expandedCmd)
 	}
 	return m, nil

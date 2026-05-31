@@ -57,8 +57,19 @@ func (m Model) restoreSingleTabSession(sess *SessionState, contexts []model.Item
 	} else {
 		m.recomputeReadOnly(discoveryCtx)
 	}
-	m.applyPinnedGroups()
+	m.applyPinnedTypes()
 	m.nav.Level = model.LevelResourceTypes
+	// Rebuild the security manager for the restored context. NewModel
+	// called refreshSecuritySources with m.nav.Context = "", which fell
+	// back to the kubeconfig default and registered sources for that
+	// context. If the session lands on a different context, the manager
+	// targets the wrong cluster and the initial probe's result message
+	// is dropped by updateSecurityAvailabilityLoaded's stale-context
+	// gate — leaving the sidebar's "(probing sources...)" loader stuck
+	// until the user navigates out and back in. Re-run refreshSecuritySources
+	// here so the manager + cached availability + dispatched probe all
+	// target sess.Context.
+	m.refreshSecuritySources()
 
 	m.leftItemsHistory = nil
 	m.leftItems = contexts
@@ -71,7 +82,7 @@ func (m Model) restoreSingleTabSession(sess *SessionState, contexts []model.Item
 	m.itemCache[m.navKey()] = m.middleItems
 	m.clearRight()
 
-	applySessionNamespaces(&m, sess.AllNamespaces, sess.Namespace, sess.SelectedNamespaces)
+	applySessionNamespaces(&m, sess.AllNamespaces, sess.Namespace, sess.SelectedNamespaces, sess.NsSelectionNegated)
 
 	var cmds []tea.Cmd
 	needsDiscovery := m.shouldFireDiscoveryFor(discoveryCtx)
@@ -82,6 +93,10 @@ func (m Model) restoreSingleTabSession(sess *SessionState, contexts []model.Item
 	if cmd := m.ensureNamespaceCacheFresh(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	// Security availability is probed lazily on first focus of the Security
+	// category (maybeProbeSecurityOnFocus), not eagerly on session restore.
+	// refreshSecuritySources above reseeds the sidebar from the on-disk cache
+	// and clears the per-context probe guard for sess.Context.
 
 	if sess.ResourceType != "" {
 		rt, ok := resolveSessionResourceType(sess.ResourceType, m.discoveredResources[discoveryCtx])
@@ -101,6 +116,7 @@ func (m Model) restoreSingleTabSession(sess *SessionState, contexts []model.Item
 			m.leftItemsHistory = [][]model.Item{contexts}
 			m.leftItems = m.middleItems
 			m.nav.ResourceType = rt
+			m.applyResourceTypeSortDefault(m.nav.ResourceType, m.nav.Context)
 			m.nav.Level = model.LevelResources
 			m.setMiddleItems(nil)
 			m.clearRight()
@@ -153,6 +169,7 @@ func (m Model) restoreMultiTabSession(sess *SessionState, contexts []model.Item)
 		Namespace:          activeSess.Namespace,
 		AllNamespaces:      activeSess.AllNamespaces,
 		SelectedNamespaces: activeSess.SelectedNamespaces,
+		NsSelectionNegated: activeSess.NsSelectionNegated,
 		ResourceType:       activeSess.ResourceType,
 		ResourceName:       activeSess.ResourceName,
 	}, contexts)
@@ -169,6 +186,8 @@ func buildSessionTabState(st *SessionTab, discovered []model.ResourceTypeEntry) 
 		eventGrouping:     true,
 		allGroupsExpanded: true,
 		cursorMemory:      make(map[string]int),
+		filterMemory:      make(map[string]savedFilter),
+		sortMemory:        make(map[string]sortPref),
 		itemCache:         make(map[string][]model.Item),
 		selectedItems:     make(map[string]bool),
 		selectionAnchor:   -1,
@@ -186,6 +205,7 @@ func buildSessionTabState(st *SessionTab, discovered []model.ResourceTypeEntry) 
 		} else {
 			tab.selectedNamespaces = map[string]bool{st.Namespace: true}
 		}
+		tab.nsSelectionNegated = st.NsSelectionNegated
 	} else {
 		tab.allNamespaces = true
 	}
@@ -226,10 +246,11 @@ func contextInList(ctx string, items []model.Item) bool {
 	return false
 }
 
-func applySessionNamespaces(m *Model, allNS bool, ns string, selectedNS []string) {
+func applySessionNamespaces(m *Model, allNS bool, ns string, selectedNS []string, negated bool) {
 	if allNS {
 		m.allNamespaces = true
 		m.selectedNamespaces = nil
+		m.nsSelectionNegated = false
 	} else if ns != "" {
 		m.namespace = ns
 		m.allNamespaces = false
@@ -241,5 +262,14 @@ func applySessionNamespaces(m *Model, allNS bool, ns string, selectedNS []string
 		} else {
 			m.selectedNamespaces = map[string]bool{ns: true}
 		}
+		m.nsSelectionNegated = negated
+	} else {
+		// Session omitted the namespace (older or partially-populated file):
+		// reset to all-namespaces rather than inheriting the prior tab's
+		// namespace filter, which would silently scope the restored context.
+		m.namespace = ""
+		m.allNamespaces = true
+		m.selectedNamespaces = nil
+		m.nsSelectionNegated = false
 	}
 }

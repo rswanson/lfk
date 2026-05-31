@@ -11,6 +11,8 @@ import (
 
 	"github.com/janosmiko/lfk/internal/k8s"
 	"github.com/janosmiko/lfk/internal/model"
+	"github.com/janosmiko/lfk/internal/security"
+	"github.com/janosmiko/lfk/internal/ui"
 )
 
 // viewMode tracks the current view state.
@@ -80,6 +82,7 @@ const (
 	overlayLocalClusters  // local-cluster manager (Ctrl+N at LevelClusters)
 	overlayTrafficCapture // per-pod live packet capture (action menu key c)
 	overlayCopyFormat     // Y-key copy-as picker (YAML / JSON / Table)
+	overlayShuttingDown   // non-interactive "graceful shutdown in progress" notice
 )
 
 // whoCanState groups the reverse-RBAC ("Who-Can") fields so they live
@@ -416,6 +419,7 @@ type TabState struct {
 	middleScroll       int // persistent scroll position for middle column (vim-style scrolloff)
 	leftScroll         int // persistent scroll position for left column (vim-style scrolloff)
 	cursorMemory       map[string]int
+	filterMemory       map[string]savedFilter
 	itemCache          map[string][]model.Item
 	cacheFingerprints  map[string]string
 	yamlContent        string
@@ -432,8 +436,10 @@ type TabState struct {
 	namespace          string
 	allNamespaces      bool
 	selectedNamespaces map[string]bool
+	nsSelectionNegated bool
 	sortColumnName     string // column name to sort by (e.g. "Name", "Age", "CPU")
 	sortAscending      bool
+	sortMemory         map[string]sortPref
 	filterText         string
 	watchMode          bool
 	// readOnly blocks all mutating actions for this tab. Re-evaluated on
@@ -455,6 +461,10 @@ type TabState struct {
 	// to clear them.
 	metricsContent       string
 	previewEventsContent string
+	// Raw inputs behind the two footers above, retained per-tab so a theme
+	// change / resize can re-render them in place (see recomposeThemedContent).
+	metricsData       *metricsInputs
+	previewEventsData []ui.EventTimelineEntry
 
 	// Toggle to show only Warning events in Event list view.
 	warningEventsOnly bool
@@ -534,6 +544,19 @@ type TabState struct {
 	explainCursor      int
 	explainScroll      int
 	explainSearchQuery string // persisted search query for n/N navigation
+
+	// Security feature state — per-tab so two tabs pointing at different
+	// clusters keep their own source manager and availability map.
+	// Without these, the active tab's state leaked into other tabs via
+	// the global SecuritySourcesFn hook, so the sidebar's Security
+	// category showed the wrong sources after tab switches.
+	// securityIgnores stays at Model level (the rules database is keyed
+	// by context internally and shared across tabs).
+	securityManager            *security.Manager
+	securityAvailabilityByName map[string]bool
+	securityIndex              *security.FindingIndex
+	securityActiveGroup        string
+	showSecurityIgnored        bool
 }
 
 // columnToggleEntry represents a single column in the column toggle overlay.

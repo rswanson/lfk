@@ -6,6 +6,17 @@
 
 **LFK** is a keyboard-focused, yazi-inspired terminal user interface for navigating and managing Kubernetes clusters. It brings a three-column Miller columns layout with an owner-based resource hierarchy to your terminal.
 
+## Support
+
+LFK is a side project I build in my free time, and the tools that go into it
+(IDE licenses, AI assistants) are not free. If LFK saves you time and you'd like
+to help cover those costs and fund continued development, consider sponsoring:
+
+- [GitHub Sponsors](https://github.com/sponsors/janosmiko)
+- [Buy Me a Coffee](https://buymeacoffee.com/janosmiko)
+
+Every contribution is appreciated and helps make LFK sustainable. Thank you for your support!
+
 ## Screenshots
 
 ### Demo
@@ -61,7 +72,7 @@
 - **Three-column Miller columns** interface (parent / current / preview)
 - **Owner-based navigation**: Clusters -> Resource Types -> Resources -> Owned Resources -> Containers
 - **Resource groups**: Dashboards, Workloads, Networking, Config, Storage, ArgoCD, Helm, Access Control, Cluster, Custom Resources
-- **Pinned CRD groups**: Pin frequently used CRD API groups so they appear after built-in categories. Configurable via `pinned_groups` in config or interactively with `p` key (stored per-context or per named union set)
+- **Pinned resource types**: Pin individual resource types (built-in or CRD) into a "Pinned" section at the top of the list, below the dashboards. Configurable via `pinned_types` in config (legacy `pinned_groups` also supported) or interactively with `p` key (stored per-context or per named union set)
 - **CRD categories**: Discovered CRDs are grouped by API group name (e.g., `argoproj.io`, `longhorn.io`, `networking.istio.io`)
 - **Hide rarely used resources**: CSI internals, admission webhooks, APF, leases, runtime classes, and uncategorized core resources are hidden by default. Press `H` to surface them under their categories and an "Advanced" group (resets each launch)
 - **Expandable/collapsible resource groups** with `z`
@@ -85,10 +96,11 @@
 ### Resource Operations
 
 - **Read-only mode**: Lock a session against destructive actions (delete, edit, scale, restart, exec, port-forward, drain, etc.). Enable with `--read-only`, the `read_only: true` config field, per-context `clusters.<name>.read_only`, or the in-app `Ctrl+R` toggle (toggles the highlighted row's `[RO]` marker at the cluster picker; toggles the current tab inside a context). A `[RO]` badge in the title bar marks active sessions. See [Read-Only Mode](docs/usage.md#read-only-mode).
+- **Security dashboard**: Aggregated findings from Trivy, Kyverno, Kubescape, Falco, Gatekeeper, plus a built-in zero-dependency heuristic Pod-spec scanner. Auto-detects installed sources, shows a per-resource SEC badge, and probes lazily on first use. Enable/disable globally or per cluster via `security.enabled` / `clusters.<name>.security`. See [Security Dashboard](docs/security.md).
 - **Context-aware action menus**: logs, exec, attach, debug, scale, restart, delete, describe, edit, events, port-forward, vuln scan, PVC resize
 - **Custom user-defined actions**: Define custom shell commands per resource type in config
 - **Multi-select with bulk actions**: Select multiple resources with Space, range-select with Ctrl+Space, perform bulk delete, scale, restart, and ArgoCD bulk sync/refresh
-- **Resource sorting** by name, age, or status
+- **Resource sorting** by name, age, or status, remembered per resource kind for the session
 - **Filter and search**: Filter with `f`, search with `/` -- supports substring, regex (auto-detected), and fuzzy (`~` prefix) modes
 - **Abbreviated search**: Type `pvc`, `hpa`, `deploy` etc. to jump to resource types
 - **Command bar** (`:`) with vertical dropdown autocomplete: resource jumps (`:pod`, `:dep`), built-in commands (`:ns`, `:ctx`, `:set`, `:sort`, `:export`), kubectl with `:k`/`:kubectl` prefix and flag/namespace completion, shell commands (`:!`). Value positions (namespace, context, resource name, option, column, format) accept fuzzy matches; command names stay on prefix.
@@ -205,7 +217,7 @@ Clusters (kubeconfig contexts)
                     +-- Containers (for Pods)
 ```
 
-Namespaces are **not** a navigation level. The current namespace is shown in the top-right corner and can be changed by pressing `\`. All-namespaces mode is enabled by default (toggle with `A`).
+Namespaces are **not** a navigation level. The current namespace is shown in the top-right corner and can be changed by pressing `\`. All-namespaces mode is enabled by default (toggle with `A`). Inside the namespace selector, press `Space` to include namespaces, `Tab` to exclude them (negative selection — shows all except the marked namespaces, each prefixed with `!`), `A` to reset to all-namespaces mode, or `R` to refresh the list from the cluster.
 
 ### Owner Resolution
 
@@ -236,12 +248,12 @@ Namespaces are **not** a navigation level. The current namespace is shown in the
 | `Ctrl+F` / `Ctrl+B` / `PgDn` / `PgUp` | Full-page scroll down/up |
 | `Enter` | Open full-screen YAML view / navigate into |
 | `z` | Toggle expand/collapse all resource groups / toggle event grouping (Events view) |
-| `p` | Pin/unpin CRD group (at resource types level) |
+| `p` | Pin/unpin resource type (at resource types level) |
 | `H` | Toggle rarely used resource types (CSI internals, webhooks, APF, leases, advanced core) in the sidebar |
 | `0` / `1` / `2` | Jump to clusters / types / resources level |
 | `J` / `K` | Scroll preview pane down/up |
 | `o` | Jump to owner/controller of selected resource |
-| `Backspace` | Jump back through teleport history (owner / port-forward / orphan / mark jumps) |
+| `Backspace` | Jump back through teleport history (owner / port-forward / orphan / finding / mark jumps) |
 
 ### Views and Modes
 
@@ -344,13 +356,6 @@ All search and filter inputs support three modes, auto-detected from the query s
 ## Contributing
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for prerequisites, development setup, build/test commands, project layout, and the PR submission flow.
-
-## Support
-
-If you find lfk useful and want to support its development:
-
-- [GitHub Sponsors](https://github.com/sponsors/janosmiko)
-- [Buy Me a Coffee](https://buymeacoffee.com/janosmiko)
 
 ## License
 

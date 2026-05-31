@@ -33,6 +33,17 @@ func isContextCanceled(err error) bool {
 
 // Update handles messages.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Once graceful shutdown has begun, the drain goroutine owns the shared
+	// managers; freeze the model so no concurrent Update path mutates state
+	// underneath it. The only message that still matters is the drain's
+	// completion, which triggers the actual quit.
+	if m.shuttingDown {
+		if _, ok := msg.(shutdownCompleteMsg); ok {
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.updateWindowSize(msg)
@@ -102,6 +113,15 @@ func (m Model) updateResourceMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) { //nol
 		return mdl, cmd, true
 	case namespacesLoadedMsg:
 		mdl, cmd := m.updateNamespacesLoaded(msg)
+		return mdl, cmd, true
+	case securityAvailabilityLoadedMsg:
+		mdl, cmd := m.updateSecurityAvailabilityLoaded(msg)
+		return mdl, cmd, true
+	case securityFindingsLoadedMsg:
+		mdl := m.updateSecurityFindingsLoaded(msg)
+		return mdl, nil, true
+	case securityIgnoresSaveErrMsg:
+		mdl, cmd := m.updateSecurityIgnoresSaveErr(msg)
 		return mdl, cmd, true
 	case yamlLoadedMsg:
 		mdl, cmd := m.updateYamlLoaded(msg)
@@ -447,6 +467,9 @@ func (m Model) updateWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
 	m.clampAllCursors()
+	// Re-render every width-dependent cached preview (dashboard, monitoring,
+	// metrics bar, events footer) so they use the new width.
+	m = m.recomposeThemedContent()
 	// Resize the embedded PTY terminal if active.
 	if m.mode == modeExec && m.execTerm != nil && m.execPTY != nil {
 		cols := m.width
