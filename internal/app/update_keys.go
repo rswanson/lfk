@@ -378,7 +378,11 @@ func (m Model) handleKeyWatchMode() (tea.Model, tea.Cmd) {
 	m.watchMode = !m.watchMode
 	if m.watchMode {
 		m.setStatusMessage(fmt.Sprintf("Watch mode ON (refresh every %s)", m.watchInterval), false)
-		return m, tea.Batch(scheduleWatchTick(m.activeWatchInterval()), scheduleStatusClear())
+		// Start a fresh chain (nextWatchTick bumps watchTickGen) so a
+		// re-enable can't leave a stale chain from a previous enable
+		// running in parallel. activeWatchInterval() respects focus/idle so
+		// an immediately-blurred or idle session still gets the slow cadence.
+		return m, tea.Batch(m.nextWatchTick(m.activeWatchInterval()), scheduleStatusClear())
 	}
 	m.setStatusMessage("Watch mode OFF", false)
 	return m, scheduleStatusClear()

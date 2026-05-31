@@ -114,20 +114,38 @@ func (m Model) foregroundIdle() bool {
 }
 
 // snapBackIfIdle returns the cmd needed to leave foreground-idle: an
-// immediate refresh + a watch-tick reschedule at the foreground
-// interval. Returns nil when not idle or when blurred (PR-4 owns that
-// path; double-snapping would be redundant).
-func (m Model) snapBackIfIdle() tea.Cmd {
+// immediate refresh + a fresh foreground-cadence watch-tick chain.
+// Returns nil when not idle or when blurred (PR-4 owns that path;
+// double-snapping would be redundant). Pointer receiver: it bumps
+// watchTickGen via nextWatchTick so the slow idle chain is retired rather
+// than left running alongside the new fast one — the caller must use the
+// mutated model.
+func (m *Model) snapBackIfIdle() tea.Cmd {
 	if !m.focused || !m.foregroundIdle() {
 		return nil
 	}
-	return tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.watchInterval))
+	return tea.Batch(m.refreshCurrentLevel(), m.nextWatchTick(m.watchInterval))
 }
 
-// scheduleWatchTick returns a command that sends a watchTickMsg after the interval.
-func scheduleWatchTick(interval time.Duration) tea.Cmd {
+// nextWatchTick bumps the watch-tick generation so any in-flight chain is
+// retired on its next fire, then returns a command starting a single
+// fresh chain at interval. Every site that BEGINS a new watch loop (focus
+// regain, idle snap-back, the watch-mode toggle) must go through here;
+// updateWatchTick re-arms the live chain with the current generation (no
+// bump) so it perpetuates rather than multiplies. The initial chain in
+// Init schedules at the zero generation directly, matching the freshly
+// constructed Model's watchTickGen.
+func (m *Model) nextWatchTick(interval time.Duration) tea.Cmd {
+	m.watchTickGen++
+	return scheduleWatchTick(m.watchTickGen, interval)
+}
+
+// scheduleWatchTick returns a command that sends a watchTickMsg stamped
+// with gen after the interval. Callers pass the generation the resulting
+// chain belongs to so updateWatchTick can drop superseded chains.
+func scheduleWatchTick(gen uint64, interval time.Duration) tea.Cmd {
 	return energy.Tick("main-context-interval", interval, func(_ time.Time) tea.Msg {
-		return watchTickMsg{}
+		return watchTickMsg{gen: gen}
 	})
 }
 

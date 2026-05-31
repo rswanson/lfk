@@ -121,6 +121,14 @@ func (m Model) updateWatchTick(msg watchTickMsg) (tea.Model, tea.Cmd) {
 	if !m.watchMode {
 		return m, nil
 	}
+	// Drop ticks from a superseded chain. A focus regain, idle snap-back,
+	// or watch-mode toggle bumps watchTickGen and starts a fresh chain;
+	// because tea.Tick can't be cancelled, the old chain's next tick still
+	// arrives here — ignoring it (no re-arm) is what lets it die instead of
+	// running in parallel and doubling refreshes.
+	if msg.gen != m.watchTickGen {
+		return m, nil
+	}
 	// Mark this dispatch as a watch-tick refresh so the instrumented
 	// loaders called below (through refreshCurrentLevel) use
 	// Registry.StartUntracked and don't flash the title-bar indicator
@@ -135,7 +143,9 @@ func (m Model) updateWatchTick(msg watchTickMsg) (tea.Model, tea.Cmd) {
 	// flag or its loaders would also call StartUntracked and the
 	// indicator would never appear for user actions.
 	m.suppressBgtasks = true
-	cmd := tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.activeWatchInterval()))
+	// Re-arm with the CURRENT generation (no bump): this perpetuates the
+	// one live chain rather than starting another.
+	cmd := tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.watchTickGen, m.activeWatchInterval()))
 	m.suppressBgtasks = false
 	return m, cmd
 }

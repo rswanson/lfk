@@ -140,8 +140,12 @@ type statusMessageExpiredMsg struct{}
 // startupTipMsg delivers a random tip to display on startup.
 type startupTipMsg struct{ tip string }
 
-// watchTickMsg triggers a periodic refresh in watch mode.
-type watchTickMsg struct{}
+// watchTickMsg triggers a periodic refresh in watch mode. gen is the
+// watch-tick generation the tick was scheduled under; updateWatchTick
+// drops any tick whose gen no longer matches Model.watchTickGen so that
+// only one self-re-arming chain is ever live (tea.Tick cannot be
+// cancelled, so superseded chains are retired by ignoring their ticks).
+type watchTickMsg struct{ gen uint64 }
 
 type previewDebounceTickMsg struct{ gen uint64 }
 

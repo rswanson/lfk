@@ -183,11 +183,11 @@ type Model struct {
 	watchInterval time.Duration
 	// focused is set/cleared by tea.FocusMsg/tea.BlurMsg; drives activeWatchInterval().
 	focused bool
-	// lastInputAt is the timestamp of the most recent KeyMsg or MouseMsg. Used
-	// by activeWatchInterval() to detect foreground-idle (no input for
-	// foregroundIdleThreshold). Initialised in NewModel so a freshly
-	// constructed Model is never idle.
+	// lastInputAt timestamps the last KeyMsg/MouseMsg; activeWatchInterval()
+	// reads it to detect foreground-idle (NewModel seeds it non-idle).
 	lastInputAt time.Time
+	// watchTickGen guards against duplicate watch-tick chains; see nextWatchTick.
+	watchTickGen uint64
 	// Read-only mode: blocks all mutating actions for the active tab. Mirrors
 	// the active TabState.readOnly; re-evaluated on context switch and tab
 	// switch.

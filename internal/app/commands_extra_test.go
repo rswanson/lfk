@@ -130,7 +130,7 @@ func TestScheduleStartupTip(t *testing.T) {
 // --- scheduleWatchTick ---
 
 func TestScheduleWatchTick(t *testing.T) {
-	cmd := scheduleWatchTick(5)
+	cmd := scheduleWatchTick(0, 5)
 	assert.NotNil(t, cmd)
 }
 

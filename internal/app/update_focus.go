@@ -31,7 +31,10 @@ func (m Model) updateFocus(_ tea.FocusMsg) (tea.Model, tea.Cmd) {
 	// only need it true for the duration of refreshCurrentLevel().
 	// Reset before return so it doesn't leak into subsequent Updates.
 	m.suppressBgtasks = true
-	cmd := tea.Batch(m.refreshCurrentLevel(), scheduleWatchTick(m.activeWatchInterval()))
+	// Start a fresh chain (nextWatchTick bumps watchTickGen) so any tick
+	// still in flight from the blurred period is retired instead of
+	// running alongside this one.
+	cmd := tea.Batch(m.refreshCurrentLevel(), m.nextWatchTick(m.activeWatchInterval()))
 	m.suppressBgtasks = false
 	return m, cmd
 }

@@ -28,7 +28,11 @@ func (m Model) Init() tea.Cmd {
 	// log overlay instead of only the on-disk file.
 	cmds = append(cmds, waitForLoggerUI())
 	if m.watchMode {
-		cmds = append(cmds, scheduleWatchTick(m.activeWatchInterval()))
+		// Initial chain uses the zero generation, matching the freshly
+		// constructed Model's watchTickGen (Init's receiver is a copy, so a
+		// bump here would not stick and would orphan the loop). The first
+		// focus/idle/toggle event advances the generation and retires this.
+		cmds = append(cmds, scheduleWatchTick(m.watchTickGen, m.activeWatchInterval()))
 	}
 	if ui.ConfigTipsEnabled {
 		cmds = append(cmds, scheduleStartupTip())
