@@ -460,6 +460,17 @@ confirm_on_exit: true
 # Default: 2s
 # watch_interval: 2s
 
+# ─── Blurred / Idle Watch Interval ────────────────────────────────────────────
+# Watch cadence used while the lfk window is unfocused (terminal blur) or a
+# focused window has been idle for 120s. Slows background wakeups to save
+# battery; snaps back to watch_interval on focus or keypress.
+# Same Go-duration form and [500ms, 10m] clamp as watch_interval.
+# Lower it to keep a visible-but-unfocused dashboard fresh; set it equal to
+# watch_interval to disable blur throttling. Invalid values fall back to 30s.
+# Override with the --blurred-watch-interval CLI flag.
+# Default: 30s
+# blurred_watch_interval: 30s
+
 # ─── Kubeshark ────────────────────────────────────────────────────────────────
 # Namespace probed for Service kubeshark-hub by the Traffic Capture overlay.
 # Default: kubeshark (matches `helm install kubeshark/kubeshark -n kubeshark`).

@@ -115,7 +115,7 @@ func (m Model) updateCaptureUpdate(_ captureUpdateMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) scheduleCaptureTick(id int) tea.Cmd {
-	return energy.Tick("capture-100ms", 100*time.Millisecond, func(t time.Time) tea.Msg {
+	return energy.Tick("capture-100ms", m.pollInterval(100*time.Millisecond), func(t time.Time) tea.Msg {
 		return captureLiveTickMsg{id: id}
 	})
 }

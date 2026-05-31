@@ -7,10 +7,10 @@ import (
 )
 
 // updateBlur handles tea.BlurMsg. It flips the focus flag so the next
-// time a watch tick is scheduled, activeWatchInterval returns
-// blurredWatchInterval. We deliberately do not try to cancel any
-// in-flight watch tick -- Bubble Tea has no tick-cancellation primitive
-// and a single stale fire at the old interval is harmless.
+// time a watch tick is scheduled, activeWatchInterval returns the
+// blurred interval. We deliberately do not try to cancel any in-flight
+// watch tick -- Bubble Tea has no tick-cancellation primitive and a
+// single stale fire at the old interval is harmless.
 func (m Model) updateBlur(_ tea.BlurMsg) (tea.Model, tea.Cmd) {
 	m.focused = false
 	return m, nil

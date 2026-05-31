@@ -19,12 +19,12 @@
     "sched_latency_p99_us": 0,
     "tick_counts_total": {
       "main-context-interval": 41,
-      "main-refresh-5s": 84,
+      "status-clear-5s": 84,
       "main-status-500ms": 0
     },
     "tick_rates_per_second": {
       "main-context-interval": 0.49397560008728186,
-      "main-refresh-5s": 1.0120475709105288,
+      "status-clear-5s": 1.0120475709105288,
       "main-status-500ms": 0
     }
   }

@@ -25,6 +25,9 @@ type StartupOptions struct {
 	NoColor            bool          // --no-color: forces monochrome output regardless of env/config.
 	ReadOnly           bool          // --read-only: blocks all mutating actions; sticky for the process.
 	WatchInterval      time.Duration // 0 means not set — fall back to config/default.
+	// BlurredWatchInterval overrides the blurred/idle watch cadence. 0 means
+	// not set — fall back to config/default.
+	BlurredWatchInterval time.Duration
 }
 
 // HasCLIOverrides returns true when any CLI flag was provided.
