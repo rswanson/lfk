@@ -99,6 +99,21 @@ const (
 // app.NewModel.
 var ConfigWatchInterval = DefaultWatchInterval
 
+// DefaultBlurredWatchInterval is the watch-tick cadence used while the
+// terminal reports the lfk window as unfocused, or while the focused
+// window has seen no input for the foreground-idle threshold. The default
+// trades freshness for battery; users who keep lfk visible-but-unfocused
+// (watching a dashboard on a second monitor) can lower it via
+// blurred_watch_interval to keep the view fresh, at a battery cost.
+const DefaultBlurredWatchInterval = 30 * time.Second
+
+// ConfigBlurredWatchInterval is the resolved blurred/idle polling interval.
+// Set from config file; CLI flag override is applied later in app.NewModel.
+// Clamped to [MinWatchInterval, MaxWatchInterval] like the foreground
+// interval — including values below the foreground interval, which a user
+// may pick to effectively disable blur throttling.
+var ConfigBlurredWatchInterval = DefaultBlurredWatchInterval
+
 // clamp01 restricts v to [0.0, 1.0].
 func clamp01(v float64) float64 {
 	if v < 0 {
