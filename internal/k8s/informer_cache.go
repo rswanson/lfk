@@ -16,7 +16,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/janosmiko/lfk/internal/model"
-	"github.com/janosmiko/lfk/internal/qos"
 )
 
 // Default resync period for informers: zero means "never resync from a full
@@ -448,16 +447,10 @@ func (ic *informerCache) getOrStart(contextName string, gvr schema.GroupVersionR
 	// start so a concurrent Stop+Wait can never see a zero counter that
 	// races the goroutine launch.
 	ic.wg.Add(2)
-	// QoS-tagged: informer watch loops are long-running and not on the
-	// user's render path. Routing them to Utility lets macOS place them
-	// on E-cores when the system is under pressure. Closure captures
-	// `informer` and `entry.stopCh` directly — safe because the enclosing
-	// function is not a loop; do NOT move this into a loop without
-	// switching back to a positional-arg goroutine.
-	go qos.RunWith(qos.Utility, func() {
+	go func() {
 		defer ic.wg.Done()
 		informer.Run(entry.stopCh)
-	})
+	}()
 	go func(inf cache.SharedIndexInformer, stopCh, synced chan struct{}) {
 		defer ic.wg.Done()
 		// HasSynced flips true after the initial LIST completes; we close
